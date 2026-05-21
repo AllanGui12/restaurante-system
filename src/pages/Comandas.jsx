@@ -26,7 +26,7 @@ export default function Comandas() {
 
   async function carregarComandas() {
     const response = await fetch(
-      '/api/comandas'
+      'https://restaurante-api-dftr.onrender.com/comandas'
     );
 
     const data = await response.json();
@@ -36,7 +36,7 @@ export default function Comandas() {
 
   async function carregarProdutos() {
     const response = await fetch(
-      '/api/produtos'
+      'https://restaurante-api-dftr.onrender.com/produtos'
     );
 
     const data = await response.json();
@@ -46,7 +46,7 @@ export default function Comandas() {
 
   async function carregarItens(comandaId) {
     const response = await fetch(
-      `/api/comandas/${comandaId}`
+      `https://restaurante-api-dftr.onrender.com/comandas/${comandaId}`
     );
 
     const data = await response.json();
@@ -58,7 +58,7 @@ export default function Comandas() {
     e.preventDefault();
 
     await fetch(
-      '/api/comandas',
+      'https://restaurante-api-dftr.onrender.com/comandas',
       {
         method: 'POST',
         headers: {
@@ -92,7 +92,7 @@ export default function Comandas() {
     e.preventDefault();
 
     await fetch(
-      `/api/comandas/${comandaAberta}/itens`,
+      `https://restaurante-api-dftr.onrender.com/comandas/${comandaAberta}/itens`,
       {
         method: 'POST',
         headers: {
@@ -117,7 +117,7 @@ export default function Comandas() {
     novaQuantidade
   ) {
     await fetch(
-      `/api/itens/${itemId}`,
+      `https://restaurante-api-dftr.onrender.com/itens/${itemId}`,
       {
         method: 'PUT',
         headers: {
@@ -140,7 +140,7 @@ export default function Comandas() {
     );
 
     const response = await fetch(
-      `/api/comandas/${comandaPagamento}/fechar`,
+      `https://restaurante-api-dftr.onrender.com/comandas/${comandaPagamento}/fechar`,
       {
         method: 'PUT',
         headers: {
@@ -170,7 +170,7 @@ export default function Comandas() {
     if (!confirmar) return;
 
     await fetch(
-      `/api/comandas/${id}`,
+      `https://restaurante-api-dftr.onrender.com/comandas/${id}`,
       {
         method: 'DELETE',
       }

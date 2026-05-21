@@ -8,7 +8,7 @@ export default function Login({ setUsuarioLogado }) {
   async function entrar(e) {
     e.preventDefault();
 
-    const response = await fetch('/api/login', {
+    const response = await fetch('https://restaurante-api-dftr.onrender.com/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

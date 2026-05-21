@@ -14,7 +14,7 @@ export default function Produtos() {
   async function carregarProdutos() {
 
     const response = await fetch(
-      '/api/produtos'
+      'https://restaurante-api-dftr.onrender.com/produtos'
     );
 
     const data = await response.json();
@@ -30,7 +30,7 @@ export default function Produtos() {
     if (produtoEditando) {
 
       await fetch(
-        `/api/produtos/${produtoEditando}`,
+        `https://restaurante-api-dftr.onrender.com/produtos/${produtoEditando}`,
         {
           method: 'PUT',
           headers: {
@@ -48,7 +48,7 @@ export default function Produtos() {
 
       // CADASTRAR PRODUTO
       await fetch(
-        '/api/produtos',
+        'https://restaurante-api-dftr.onrender.com/produtos',
         {
           method: 'POST',
           headers: {
@@ -95,7 +95,7 @@ export default function Produtos() {
     if (!confirmar) return;
 
     await fetch(
-      `/api/produtos/${id}`,
+      `https://restaurante-api-dftr.onrender.com/produtos/${id}`,
       {
         method: 'DELETE',
       }
