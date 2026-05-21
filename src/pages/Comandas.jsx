@@ -26,7 +26,7 @@ export default function Comandas() {
 
   async function carregarComandas() {
     const response = await fetch(
-      'https://restaurante-api-dftr.onrender.com/comandas'
+      'https://restaurante-api-2.onrender.com/comandas'
     );
 
     const data = await response.json();
@@ -36,7 +36,7 @@ export default function Comandas() {
 
   async function carregarProdutos() {
     const response = await fetch(
-      'https://restaurante-api-dftr.onrender.com/produtos'
+      'https://restaurante-api-2.onrender.com/produtos'
     );
 
     const data = await response.json();
@@ -46,7 +46,7 @@ export default function Comandas() {
 
   async function carregarItens(comandaId) {
     const response = await fetch(
-      `https://restaurante-api-dftr.onrender.com/comandas/${comandaId}`
+      `https://restaurante-api-2.onrender.com/comandas/${comandaId}`
     );
 
     const data = await response.json();
@@ -58,7 +58,7 @@ export default function Comandas() {
     e.preventDefault();
 
     await fetch(
-      'https://restaurante-api-dftr.onrender.com/comandas',
+      'https://restaurante-api-2.onrender.com/comandas',
       {
         method: 'POST',
         headers: {
@@ -92,7 +92,7 @@ export default function Comandas() {
     e.preventDefault();
 
     await fetch(
-      `https://restaurante-api-dftr.onrender.com/comandas/${comandaAberta}/itens`,
+      `https://restaurante-api-2.onrender.com/comandas/${comandaAberta}/itens`,
       {
         method: 'POST',
         headers: {
@@ -117,7 +117,7 @@ export default function Comandas() {
     novaQuantidade
   ) {
     await fetch(
-      `https://restaurante-api-dftr.onrender.com/itens/${itemId}`,
+      `https://restaurante-api-2.onrender.com/itens/${itemId}`,
       {
         method: 'PUT',
         headers: {
@@ -140,7 +140,7 @@ export default function Comandas() {
     );
 
     const response = await fetch(
-      `https://restaurante-api-dftr.onrender.com/comandas/${comandaPagamento}/fechar`,
+      `https://restaurante-api-2.onrender.com/comandas/${comandaPagamento}/fechar`,
       {
         method: 'PUT',
         headers: {
@@ -170,7 +170,7 @@ export default function Comandas() {
     if (!confirmar) return;
 
     await fetch(
-      `https://restaurante-api-dftr.onrender.com/comandas/${id}`,
+      `https://restaurante-api-2.onrender.com/comandas/${id}`,
       {
         method: 'DELETE',
       }

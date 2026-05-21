@@ -14,7 +14,7 @@ export default function ComandaDetalhe() {
   async function carregarProdutos() {
 
     const response = await fetch(
-      'https://restaurante-api-dftr.onrender.com/produtos'
+      'https://restaurante-api-2.onrender.com/produtos'
     );
 
     const data = await response.json();
@@ -25,7 +25,7 @@ export default function ComandaDetalhe() {
   async function carregarItens() {
 
     const response = await fetch(
-      `https://restaurante-api-dftr.onrender.com/comandas/${id}`
+      `https://restaurante-api-2.onrender.com/comandas/${id}`
     );
 
     const data = await response.json();
@@ -38,7 +38,7 @@ export default function ComandaDetalhe() {
     e.preventDefault();
 
     await fetch(
-      `https://restaurante-api-dftr.onrender.com/comandas/${id}/itens`,
+      `https://restaurante-api-2.onrender.com/comandas/${id}/itens`,
       {
         method: 'POST',
         headers: {
