@@ -88,10 +88,13 @@ export default function Comandas() {
     carregarComandas();
   }
 
-  async function fecharComanda(id) {
+  async function atualizarQuantidade(
+    itemId,
+    novaQuantidade
+  ) {
 
     await fetch(
-      `https://restaurante-api-2.onrender.com/comandas/${id}/fechar`,
+      `https://restaurante-api-2.onrender.com/itens/${itemId}`,
       {
         method: 'PUT',
 
@@ -100,8 +103,20 @@ export default function Comandas() {
         },
 
         body: JSON.stringify({
-          forma_pagamento: 'PIX',
+          quantidade: novaQuantidade,
         }),
+      }
+    );
+
+    carregarComandas();
+  }
+
+  async function fecharComanda(id) {
+
+    await fetch(
+      `https://restaurante-api-2.onrender.com/comandas/${id}/fechar`,
+      {
+        method: 'PUT',
       }
     );
 
@@ -124,85 +139,6 @@ export default function Comandas() {
       <p className="text-zinc-400 mb-10">
         Gerencie os itens e produtos das comandas
       </p>
-
-      {/* NOVA COMANDA */}
-
-      <div
-        className="
-          bg-[#0B1120]
-          border
-          border-zinc-800
-          rounded-3xl
-          p-8
-          mb-8
-        "
-      >
-
-        <h2 className="text-3xl font-bold mb-6">
-          Nova Comanda
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-          <input
-            type="text"
-            placeholder="Nome do cliente"
-            value={cliente}
-            onChange={(e) =>
-              setCliente(e.target.value)
-            }
-            className="
-              bg-[#070D1A]
-              border
-              border-zinc-700
-              rounded-2xl
-              px-5
-              py-4
-              text-zinc-200
-              outline-none
-            "
-          />
-
-          <select
-            value={tipo}
-            onChange={(e) =>
-              setTipo(e.target.value)
-            }
-            className="
-              bg-[#070D1A]
-              border
-              border-zinc-700
-              rounded-2xl
-              px-5
-              py-4
-              text-zinc-200
-              outline-none
-            "
-          >
-            <option>Mesa</option>
-            <option>Delivery</option>
-            <option>Balcão</option>
-          </select>
-
-          <button
-            onClick={criarComanda}
-            className="
-              bg-green-500
-              hover:bg-green-600
-              rounded-2xl
-              px-8
-              py-4
-              font-bold
-            "
-          >
-            Criar Comanda
-          </button>
-
-        </div>
-
-      </div>
-
-      {/* LISTA */}
 
       <div className="space-y-8">
 
@@ -259,8 +195,6 @@ export default function Comandas() {
               </div>
 
             </div>
-
-            {/* ADICIONAR PRODUTO */}
 
             <div
               className="
@@ -344,8 +278,6 @@ export default function Comandas() {
 
             </div>
 
-            {/* ITENS */}
-
             <div className="space-y-4">
 
               <h3 className="text-2xl font-bold">
@@ -366,16 +298,67 @@ export default function Comandas() {
                       p-4
                       flex
                       justify-between
+                      items-center
                     "
                   >
 
-                    <p className="text-zinc-200">
-                      {item.nome}
-                    </p>
+                    <div>
 
-                    <p className="text-zinc-400">
-                      {item.quantidade}x
-                    </p>
+                      <p className="text-zinc-200 font-bold">
+                        {item.nome}
+                      </p>
+
+                      <p className="text-green-400 font-bold mt-1">
+                        R$ {Number(item.valor).toFixed(2)}
+                      </p>
+
+                    </div>
+
+                    <div className="flex items-center gap-3">
+
+                      <button
+                        onClick={() =>
+                          atualizarQuantidade(
+                            item.id,
+                            item.quantidade - 1
+                          )
+                        }
+                        className="
+                          bg-red-500
+                          hover:bg-red-600
+                          w-9
+                          h-9
+                          rounded-xl
+                          font-bold
+                        "
+                      >
+                        -
+                      </button>
+
+                      <span className="font-bold">
+                        {item.quantidade}x
+                      </span>
+
+                      <button
+                        onClick={() =>
+                          atualizarQuantidade(
+                            item.id,
+                            item.quantidade + 1
+                          )
+                        }
+                        className="
+                          bg-green-500
+                          hover:bg-green-600
+                          w-9
+                          h-9
+                          rounded-xl
+                          font-bold
+                        "
+                      >
+                        +
+                      </button>
+
+                    </div>
 
                   </div>
 
@@ -390,8 +373,6 @@ export default function Comandas() {
               )}
 
             </div>
-
-            {/* FECHAR */}
 
             <div className="mt-8 flex justify-end">
 

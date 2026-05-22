@@ -7,58 +7,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const db = new sqlite3.Database('./restaurant.db');
+const db = new sqlite3.Database('./restaurante.db');
 
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS produtos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nome TEXT NOT NULL,
-      preco REAL NOT NULL,
-      estoque INTEGER NOT NULL
-    )
-  `);
 
-  db.run(`
-    CREATE TABLE IF NOT EXISTS comandas (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      cliente TEXT,
-      tipo TEXT,
-      status TEXT,
-      total REAL DEFAULT 0,
-      forma_pagamento TEXT,
-      data DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS itens_comanda (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      comanda_id INTEGER,
-      produto_id INTEGER,
-      quantidade INTEGER,
-      valor REAL
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS usuarios (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nome TEXT NOT NULL,
-      usuario TEXT NOT NULL UNIQUE,
-      senha TEXT NOT NULL,
-      perfil TEXT NOT NULL
-    )
-  `);
-
-  db.run(`
-    INSERT OR IGNORE INTO usuarios
-    (id, nome, usuario, senha, perfil)
-    VALUES
-    (1, 'Administrador', 'admin', '1234', 'ADMIN'),
-    (2, 'Atendente', 'atendente', '1234', 'ATENDENTE')
-  `);
-});
+// ==========================
+// TESTE API
+// ==========================
 
 app.get('/', (req, res) => {
   res.send('API ONLINE');
@@ -68,519 +22,465 @@ app.get('/teste-api', (req, res) => {
   res.send('TESTE API FUNCIONANDO');
 });
 
+
+// ==========================
+// LOGIN
+// ==========================
+
 app.post('/login', (req, res) => {
+
   const { usuario, senha } = req.body;
 
-  db.get(
-    `
-    SELECT id, nome, usuario, perfil
-    FROM usuarios
-    WHERE usuario = ?
-    AND senha = ?
-    `,
-    [usuario, senha],
-    (err, user) => {
-      if (err) {
-        res.status(500).json(err);
-        return;
-      }
+  if (
+    usuario === 'administrador' &&
+    senha === '1234'
+  ) {
 
-      if (!user) {
-        res.status(401).json({
-          erro: 'Usuário ou senha inválidos'
-        });
-        return;
-      }
+    return res.json({
+      nome: 'Administrador',
+      perfil: 'ADMIN'
+    });
+  }
 
-      res.json(user);
-    }
-  );
+  if (
+    usuario === 'atendente' &&
+    senha === '1234'
+  ) {
+
+    return res.json({
+      nome: 'Atendente',
+      perfil: 'ATENDENTE'
+    });
+  }
+
+  return res.status(401).json({
+    erro: 'Usuário ou senha inválidos'
+  });
+
 });
 
+
+// ==========================
+// PRODUTOS
+// ==========================
+
 app.get('/produtos', (req, res) => {
+
   db.all(
-    `
-    SELECT *
-    FROM produtos
-    ORDER BY id DESC
-    `,
+    'SELECT * FROM produtos',
     [],
     (err, rows) => {
+
       if (err) {
-        res.status(500).json(err);
-        return;
+        return res.status(500).json(err);
       }
 
       res.json(rows);
     }
   );
+
 });
 
 app.post('/produtos', (req, res) => {
-  const { nome, preco, estoque } = req.body;
+
+  const {
+    nome,
+    preco,
+    estoque
+  } = req.body;
 
   db.run(
     `
-    INSERT INTO produtos (nome, preco, estoque)
-    VALUES (?, ?, ?)
+      INSERT INTO produtos
+      (nome, preco, estoque)
+      VALUES (?, ?, ?)
     `,
     [nome, preco, estoque],
-    function (err) {
+
+    function(err) {
+
       if (err) {
-        res.status(500).json(err);
-        return;
+        return res.status(500).json(err);
       }
 
       res.json({
-        id: this.lastID,
-        nome,
-        preco,
-        estoque
+        id: this.lastID
       });
+
     }
   );
-});
 
-app.put('/produtos/:id', (req, res) => {
-  const id = req.params.id;
-  const { nome, preco, estoque } = req.body;
-
-  db.run(
-    `
-    UPDATE produtos
-    SET nome = ?,
-        preco = ?,
-        estoque = ?
-    WHERE id = ?
-    `,
-    [nome, preco, estoque, id],
-    function (err) {
-      if (err) {
-        res.status(500).json(err);
-        return;
-      }
-
-      res.json({
-        sucesso: true
-      });
-    }
-  );
 });
 
 app.delete('/produtos/:id', (req, res) => {
-  const id = req.params.id;
 
   db.run(
-    `
-    DELETE FROM produtos
-    WHERE id = ?
-    `,
-    [id],
-    function (err) {
+    'DELETE FROM produtos WHERE id = ?',
+    [req.params.id],
+
+    function(err) {
+
       if (err) {
-        res.status(500).json(err);
-        return;
+        return res.status(500).json(err);
       }
 
       res.json({
         sucesso: true
       });
+
     }
   );
+
 });
 
+
+// ==========================
+// COMANDAS
+// ==========================
+
 app.get('/comandas', (req, res) => {
+
   db.all(
-    `
-    SELECT *
-    FROM comandas
-    ORDER BY id DESC
-    `,
+    'SELECT * FROM comandas',
     [],
-    (err, comandas) => {
+    async (err, comandas) => {
+
       if (err) {
-        res.status(500).json(err);
-        return;
+        return res.status(500).json(err);
       }
 
-      db.all(
-        `
-        SELECT
-          itens_comanda.comanda_id,
-          produtos.nome,
-          itens_comanda.quantidade
-        FROM itens_comanda
-        JOIN produtos
-          ON produtos.id = itens_comanda.produto_id
-        `,
-        [],
-        (err, itens) => {
-          if (err) {
-            res.status(500).json(err);
-            return;
-          }
+      const resultado = await Promise.all(
 
-          const resultado = comandas.map((comanda) => ({
-            ...comanda,
-            itens: itens.filter(
-              (item) => item.comanda_id === comanda.id
-            )
-          }));
+        comandas.map((comanda) => {
 
-          res.json(resultado);
-        }
+          return new Promise((resolve) => {
+
+            db.all(
+              `
+                SELECT
+                  itens_comanda.id,
+                  itens_comanda.comanda_id,
+                  itens_comanda.produto_id,
+                  produtos.nome,
+                  itens_comanda.quantidade,
+                  itens_comanda.valor
+                FROM itens_comanda
+
+                JOIN produtos
+                  ON produtos.id =
+                  itens_comanda.produto_id
+
+                WHERE itens_comanda.comanda_id = ?
+              `,
+              [comanda.id],
+
+              (errItens, itens) => {
+
+                resolve({
+                  ...comanda,
+                  itens
+                });
+
+              }
+            );
+
+          });
+
+        })
+
       );
+
+      res.json(resultado);
+
     }
   );
+
 });
 
 app.post('/comandas', (req, res) => {
-  const { cliente, tipo } = req.body;
+
+  const {
+    cliente,
+    tipo
+  } = req.body;
 
   db.run(
     `
-    INSERT INTO comandas (cliente, tipo, status)
-    VALUES (?, ?, ?)
+      INSERT INTO comandas
+      (cliente, tipo, status, total)
+
+      VALUES (?, ?, ?, ?)
     `,
-    [cliente, tipo, 'ABERTA'],
-    function (err) {
+    [cliente, tipo, 'ABERTA', 0],
+
+    function(err) {
+
       if (err) {
-        res.status(500).json(err);
-        return;
+        return res.status(500).json(err);
       }
 
       res.json({
-        id: this.lastID,
-        cliente,
-        tipo,
-        status: 'ABERTA'
+        id: this.lastID
       });
+
     }
   );
+
 });
 
-app.get('/comandas/:id', (req, res) => {
-  const comandaId = req.params.id;
 
-  db.all(
-    `
-    SELECT
-      itens_comanda.id,
-      produtos.nome,
-      itens_comanda.quantidade,
-      itens_comanda.valor
-    FROM itens_comanda
-    JOIN produtos
-      ON produtos.id = itens_comanda.produto_id
-    WHERE itens_comanda.comanda_id = ?
-    `,
-    [comandaId],
-    (err, rows) => {
-      if (err) {
-        res.status(500).json(err);
-        return;
-      }
-
-      res.json(rows);
-    }
-  );
-});
+// ==========================
+// ADICIONAR ITEM
+// ==========================
 
 app.post('/comandas/:id/itens', (req, res) => {
+
   const comandaId = req.params.id;
-  const { produto_id, quantidade } = req.body;
+
+  const {
+    produto_id,
+    quantidade
+  } = req.body;
 
   db.get(
     `
-    SELECT *
-    FROM produtos
-    WHERE id = ?
+      SELECT *
+      FROM produtos
+      WHERE id = ?
     `,
     [produto_id],
+
     (err, produto) => {
+
       if (err || !produto) {
-        res.status(404).json({
-          erro: 'Produto não encontrado'
-        });
-        return;
+        return res.status(500).json(err);
       }
 
       const valor =
-        Number(produto.preco) * Number(quantidade);
+        produto.preco * quantidade;
 
-      db.run(
+      db.get(
         `
-        INSERT INTO itens_comanda (
-          comanda_id,
-          produto_id,
-          quantidade,
-          valor
-        )
-        VALUES (?, ?, ?, ?)
+          SELECT *
+          FROM itens_comanda
+          WHERE comanda_id = ?
+          AND produto_id = ?
         `,
-        [
-          comandaId,
-          produto_id,
-          quantidade,
-          valor
-        ],
-        function (err) {
-          if (err) {
-            res.status(500).json(err);
-            return;
+        [comandaId, produto_id],
+
+        (errBusca, itemExistente) => {
+
+          if (itemExistente) {
+
+            const novaQuantidade =
+              itemExistente.quantidade +
+              Number(quantidade);
+
+            db.run(
+              `
+                UPDATE itens_comanda
+                SET quantidade = ?,
+                    valor = ?
+                WHERE id = ?
+              `,
+              [
+                novaQuantidade,
+                produto.preco * novaQuantidade,
+                itemExistente.id
+              ]
+            );
+
+          } else {
+
+            db.run(
+              `
+                INSERT INTO itens_comanda
+                (
+                  comanda_id,
+                  produto_id,
+                  quantidade,
+                  valor
+                )
+
+                VALUES (?, ?, ?, ?)
+              `,
+              [
+                comandaId,
+                produto_id,
+                quantidade,
+                valor
+              ]
+            );
+
           }
 
           db.run(
             `
-            UPDATE comandas
-            SET total = total + ?
-            WHERE id = ?
-            `,
-            [valor, comandaId],
-            function (err) {
-              if (err) {
-                res.status(500).json(err);
-                return;
-              }
+              UPDATE comandas
 
-              res.json({
-                sucesso: true
-              });
-            }
+              SET total =
+                total + ?
+
+              WHERE id = ?
+            `,
+            [valor, comandaId]
           );
+
+          res.json({
+            sucesso: true
+          });
+
         }
       );
+
     }
   );
+
 });
 
+
+// ==========================
+// ATUALIZAR QUANTIDADE
+// ==========================
+
 app.put('/itens/:id', (req, res) => {
+
   const itemId = req.params.id;
+
   const { quantidade } = req.body;
 
   db.get(
     `
-    SELECT
-      itens_comanda.*,
-      produtos.preco
-    FROM itens_comanda
-    JOIN produtos
-      ON produtos.id = itens_comanda.produto_id
-    WHERE itens_comanda.id = ?
+      SELECT itens_comanda.*,
+             produtos.preco
+
+      FROM itens_comanda
+
+      JOIN produtos
+        ON produtos.id =
+        itens_comanda.produto_id
+
+      WHERE itens_comanda.id = ?
     `,
     [itemId],
+
     (err, item) => {
+
       if (err || !item) {
-        res.status(404).json({
-          erro: 'Item não encontrado'
-        });
-        return;
+        return res.status(500).json(err);
       }
 
       if (quantidade <= 0) {
+
         db.run(
           `
-          DELETE FROM itens_comanda
-          WHERE id = ?
+            DELETE FROM itens_comanda
+            WHERE id = ?
           `,
-          [itemId],
-          function (err) {
-            if (err) {
-              res.status(500).json(err);
-              return;
-            }
-
-            db.run(
-              `
-              UPDATE comandas
-              SET total = total - ?
-              WHERE id = ?
-              `,
-              [item.valor, item.comanda_id],
-              function (err) {
-                if (err) {
-                  res.status(500).json(err);
-                  return;
-                }
-
-                res.json({
-                  removido: true
-                });
-              }
-            );
-          }
+          [itemId]
         );
 
-        return;
+        db.run(
+          `
+            UPDATE comandas
+            SET total = total - ?
+            WHERE id = ?
+          `,
+          [
+            item.valor,
+            item.comanda_id
+          ]
+        );
+
+        return res.json({
+          sucesso: true
+        });
+
       }
 
       const novoValor =
-        Number(item.preco) * Number(quantidade);
+        item.preco * quantidade;
 
       const diferenca =
-        novoValor - Number(item.valor);
+        novoValor - item.valor;
 
       db.run(
         `
-        UPDATE itens_comanda
-        SET quantidade = ?,
-            valor = ?
-        WHERE id = ?
+          UPDATE itens_comanda
+
+          SET quantidade = ?,
+              valor = ?
+
+          WHERE id = ?
         `,
         [
           quantidade,
           novoValor,
           itemId
-        ],
-        function (err) {
-          if (err) {
-            res.status(500).json(err);
-            return;
-          }
-
-          db.run(
-            `
-            UPDATE comandas
-            SET total = total + ?
-            WHERE id = ?
-            `,
-            [
-              diferenca,
-              item.comanda_id
-            ],
-            function (err) {
-              if (err) {
-                res.status(500).json(err);
-                return;
-              }
-
-              res.json({
-                sucesso: true
-              });
-            }
-          );
-        }
+        ]
       );
-    }
-  );
-});
-
-app.put('/comandas/:id/fechar', (req, res) => {
-  const id = req.params.id;
-  const { forma_pagamento } = req.body;
-
-  db.run(
-    `
-    UPDATE comandas
-    SET status = 'FECHADA',
-        forma_pagamento = ?
-    WHERE id = ?
-    `,
-    [forma_pagamento, id],
-    function (err) {
-      if (err) {
-        res.status(500).json(err);
-        return;
-      }
-
-      res.json({
-        sucesso: true,
-        forma_pagamento
-      });
-    }
-  );
-});
-
-app.delete('/comandas/:id', (req, res) => {
-  const id = req.params.id;
-
-  db.run(
-    `
-    DELETE FROM itens_comanda
-    WHERE comanda_id = ?
-    `,
-    [id],
-    function (err) {
-      if (err) {
-        res.status(500).json(err);
-        return;
-      }
 
       db.run(
         `
-        DELETE FROM comandas
-        WHERE id = ?
+          UPDATE comandas
+
+          SET total = total + ?
+
+          WHERE id = ?
         `,
-        [id],
-        function (err) {
-          if (err) {
-            res.status(500).json(err);
-            return;
-          }
-
-          res.json({
-            sucesso: true
-          });
-        }
+        [
+          diferenca,
+          item.comanda_id
+        ]
       );
-    }
-  );
-});
-
-app.get('/dashboard', (req, res) => {
-  db.all(
-    `
-    SELECT *
-    FROM comandas
-    WHERE status = 'FECHADA'
-    `,
-    [],
-    (err, comandas) => {
-      if (err) {
-        res.status(500).json(err);
-        return;
-      }
-
-      const totalVendido = comandas.reduce(
-        (acc, comanda) => acc + Number(comanda.total || 0),
-        0
-      );
-
-      const quantidadeVendas = comandas.length;
-
-      const ticketMedio =
-        quantidadeVendas > 0
-          ? totalVendido / quantidadeVendas
-          : 0;
-
-      const pagamentos = {};
-
-      comandas.forEach((comanda) => {
-        const forma =
-          comanda.forma_pagamento || 'Não informado';
-
-        pagamentos[forma] =
-          (pagamentos[forma] || 0) +
-          Number(comanda.total || 0);
-      });
 
       res.json({
-        totalVendido,
-        quantidadeVendas,
-        ticketMedio,
-        pagamentos: Object.entries(pagamentos).map(
-          ([nome, valor]) => ({
-            nome,
-            valor
-          })
-        )
+        sucesso: true
       });
+
     }
   );
+
 });
 
-const PORT = process.env.PORT || 3001;
+
+// ==========================
+// FECHAR COMANDA
+// ==========================
+
+app.put('/comandas/:id/fechar', (req, res) => {
+
+  db.run(
+    `
+      UPDATE comandas
+      SET status = 'FECHADA'
+      WHERE id = ?
+    `,
+    [req.params.id],
+
+    function(err) {
+
+      if (err) {
+        return res.status(500).json(err);
+      }
+
+      res.json({
+        sucesso: true
+      });
+
+    }
+  );
+
+});
+
+
+// ==========================
+
+const PORT =
+  process.env.PORT || 10000;
 
 app.listen(PORT, () => {
-  console.log(`API rodando na porta ${PORT}`);
+  console.log(
+    `API NOVA rodando porta ${PORT}`
+  );
 });
