@@ -295,6 +295,174 @@ app.put('/comandas/:id/fechar', (req, res) => {
   );
 });
 
+function atualizarTotalComanda(comandaId, res) {
+
+  db.all(
+    `
+    SELECT
+      itens_comanda.quantidade,
+      produtos.preco
+
+    FROM itens_comanda
+
+    JOIN produtos
+      ON produtos.id =
+      itens_comanda.produto_id
+
+    WHERE itens_comanda.comanda_id = ?
+    `,
+    [comandaId],
+
+    (err, itens) => {
+
+      if (err) {
+        return res.status(500).json(err);
+      }
+
+      const total = itens.reduce(
+        (acc, item) => {
+
+          return (
+            acc +
+            (
+              Number(item.quantidade) *
+              Number(item.preco)
+            )
+          );
+
+        },
+        0
+      );
+
+      db.run(
+        `
+        UPDATE comandas
+
+        SET total = ?
+
+        WHERE id = ?
+        `,
+        [
+          total,
+          comandaId
+        ],
+
+        function(err) {
+
+          if (err) {
+            return res.status(500).json(err);
+          }
+
+          res.json({
+            sucesso: true
+          });
+
+        }
+      );
+
+    }
+  );
+
+}
+
+app.put('/itens/:id', (req, res) => {
+
+  const itemId = req.params.id;
+
+  const { quantidade } = req.body;
+
+  db.get(
+    `
+    SELECT
+      itens_comanda.*,
+      produtos.preco
+
+    FROM itens_comanda
+
+    JOIN produtos
+      ON produtos.id =
+      itens_comanda.produto_id
+
+    WHERE itens_comanda.id = ?
+    `,
+    [itemId],
+
+    (err, item) => {
+
+      if (err || !item) {
+
+        return res.status(404).json({
+          erro: 'Item não encontrado'
+        });
+
+      }
+
+      if (quantidade <= 0) {
+
+        db.run(
+          `
+          DELETE FROM itens_comanda
+          WHERE id = ?
+          `,
+          [itemId],
+
+          function(err) {
+
+            if (err) {
+              return res.status(500).json(err);
+            }
+
+            atualizarTotalComanda(
+              item.comanda_id,
+              res
+            );
+
+          }
+        );
+
+        return;
+
+      }
+
+      const novoValor =
+        Number(item.preco) *
+        Number(quantidade);
+
+      db.run(
+        `
+        UPDATE itens_comanda
+
+        SET
+          quantidade = ?,
+          valor = ?
+
+        WHERE id = ?
+        `,
+        [
+          quantidade,
+          novoValor,
+          itemId
+        ],
+
+        function(err) {
+
+          if (err) {
+            return res.status(500).json(err);
+          }
+
+          atualizarTotalComanda(
+            item.comanda_id,
+            res
+          );
+
+        }
+      );
+
+    }
+  );
+
+});
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {

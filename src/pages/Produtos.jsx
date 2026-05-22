@@ -7,69 +7,91 @@ import {
   Package
 } from 'lucide-react';
 
-export default function Produtos() {
+const API_URL = 'https://restaurante-api-2.onrender.com';
 
+export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
 
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
   const [estoque, setEstoque] = useState('');
 
+  const [editandoId, setEditandoId] = useState(null);
+
   async function carregarProdutos() {
+    try {
+      const response = await fetch(`${API_URL}/produtos`);
+      const data = await response.json();
 
-    const response = await fetch(
-      'https://restaurante-api-2.onrender.com/produtos'
-    );
+      setProdutos(Array.isArray(data) ? data : []);
+    } catch {
+      setProdutos([]);
+    }
+  }
 
-    const data = await response.json();
+  function editarProduto(produto) {
+    setEditandoId(produto.id);
+    setNome(produto.nome);
+    setPreco(produto.preco);
+    setEstoque(produto.estoque);
+  }
 
-    setProdutos(data);
+  function limparFormulario() {
+    setEditandoId(null);
+    setNome('');
+    setPreco('');
+    setEstoque('');
   }
 
   async function salvarProduto() {
-
     if (!nome || !preco || estoque === '') {
       return;
     }
 
-    await fetch(
-      'https://restaurante-api-2.onrender.com/produtos',
-      {
-        method: 'POST',
-
+    if (editandoId) {
+      await fetch(`${API_URL}/produtos/${editandoId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-
         body: JSON.stringify({
           nome,
           preco,
           estoque,
         }),
-      }
-    );
+      });
 
-    setNome('');
-    setPreco('');
-    setEstoque('');
+      limparFormulario();
+      carregarProdutos();
+      return;
+    }
 
+    await fetch(`${API_URL}/produtos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        nome,
+        preco,
+        estoque,
+      }),
+    });
+
+    limparFormulario();
     carregarProdutos();
   }
 
   async function excluirProduto(id) {
-
     const confirmar = window.confirm(
       'Deseja excluir este produto?'
     );
 
     if (!confirmar) return;
 
-    await fetch(
-      `https://restaurante-api-2.onrender.com/produtos/${id}`,
-      {
-        method: 'DELETE',
-      }
-    );
+    await fetch(`${API_URL}/produtos/${id}`, {
+      method: 'DELETE',
+    });
 
     carregarProdutos();
   }
@@ -79,33 +101,19 @@ export default function Produtos() {
   }, []);
 
   return (
-
-    <div className="bg-[#050816] min-h-screen p-6 text-zinc-300">
-
+    <div className="bg-[#050816] min-h-screen p-6 text-white">
       <h1 className="text-4xl font-bold mb-8">
         Produtos
       </h1>
 
       <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-6 mb-8">
-
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
           <input
             type="text"
             placeholder="Nome do produto"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            className="
-              bg-[#0A0F1F]
-              border
-              border-zinc-700
-              rounded-2xl
-              px-5
-              py-4
-              outline-none
-              text-zinc-300
-              placeholder:text-zinc-500
-            "
+            className="bg-[#0A0F1F] border border-zinc-700 rounded-2xl px-5 py-4 outline-none text-white placeholder:text-zinc-500"
           />
 
           <input
@@ -113,17 +121,7 @@ export default function Produtos() {
             placeholder="Preço"
             value={preco}
             onChange={(e) => setPreco(e.target.value)}
-            className="
-              bg-[#0A0F1F]
-              border
-              border-zinc-700
-              rounded-2xl
-              px-5
-              py-4
-              outline-none
-              text-zinc-300
-              placeholder:text-zinc-500
-            "
+            className="bg-[#0A0F1F] border border-zinc-700 rounded-2xl px-5 py-4 outline-none text-white placeholder:text-zinc-500"
           />
 
           <input
@@ -131,84 +129,43 @@ export default function Produtos() {
             placeholder="Estoque"
             value={estoque}
             onChange={(e) => setEstoque(e.target.value)}
-            className="
-              bg-[#0A0F1F]
-              border
-              border-zinc-700
-              rounded-2xl
-              px-5
-              py-4
-              outline-none
-             text-zinc-300
-              placeholder:text-zinc-500
-            "
+            className="bg-[#0A0F1F] border border-zinc-700 rounded-2xl px-5 py-4 outline-none text-white placeholder:text-zinc-500"
           />
 
           <button
             onClick={salvarProduto}
-            className="
-              bg-blue-600
-              hover:bg-blue-700
-              rounded-2xl
-              font-bold
-              flex
-              items-center
-              justify-center
-              gap-2
-              transition
-            "
+            className="bg-blue-600 hover:bg-blue-700 rounded-2xl font-bold flex items-center justify-center gap-2 transition py-4"
           >
             <Plus size={20} />
-
-            Adicionar Produto
+            {editandoId ? 'Salvar Alteração' : 'Adicionar Produto'}
           </button>
-
         </div>
 
+        {editandoId && (
+          <button
+            onClick={limparFormulario}
+            className="mt-4 text-zinc-400 hover:text-white"
+          >
+            Cancelar edição
+          </button>
+        )}
       </div>
 
       <div className="space-y-6">
-
         {produtos.map((produto) => (
-
           <div
             key={produto.id}
-            className="
-              bg-[#0B1120]
-              border
-              border-zinc-800
-              rounded-3xl
-              p-6
-              flex
-              justify-between
-              items-center
-            "
+            className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-6 flex justify-between items-center"
           >
-
             <div className="flex items-center gap-6">
-
-              <div
-                className="
-                  w-20
-                  h-20
-                  rounded-full
-                  border
-                  border-zinc-700
-                  flex
-                  items-center
-                  justify-center
-                "
-              >
-
+              <div className="w-20 h-20 rounded-full border border-zinc-700 flex items-center justify-center">
                 <Package
                   size={36}
                   className="text-blue-500"
                 />
-
               </div>
 
               <div>
-
                 <h2 className="text-3xl font-bold">
                   {produto.nome}
                 </h2>
@@ -218,66 +175,35 @@ export default function Produtos() {
                 </p>
 
                 <p
-                  className={`
-                    mt-2
-                    text-xl
-                    font-bold
-                    ${
-                      produto.estoque > 0
-                        ? 'text-green-400'
-                        : 'text-red-500'
-                    }
-                  `}
+                  className={`mt-2 text-xl font-bold ${
+                    Number(produto.estoque) > 0
+                      ? 'text-green-400'
+                      : 'text-red-500'
+                  }`}
                 >
                   {produto.estoque} unidades
                 </p>
-
               </div>
-
             </div>
 
             <div className="flex gap-4">
-
               <button
-                className="
-                  bg-blue-600
-                  hover:bg-blue-700
-                  w-16
-                  h-16
-                  rounded-2xl
-                  flex
-                  items-center
-                  justify-center
-                "
+                onClick={() => editarProduto(produto)}
+                className="bg-blue-600 hover:bg-blue-700 w-16 h-16 rounded-2xl flex items-center justify-center"
               >
                 <Pencil size={24} />
               </button>
 
               <button
                 onClick={() => excluirProduto(produto.id)}
-                className="
-                  bg-red-500
-                  hover:bg-red-600
-                  w-16
-                  h-16
-                  rounded-2xl
-                  flex
-                  items-center
-                  justify-center
-                "
+                className="bg-red-500 hover:bg-red-600 w-16 h-16 rounded-2xl flex items-center justify-center"
               >
                 <Trash2 size={24} />
               </button>
-
             </div>
-
           </div>
-
         ))}
-
       </div>
-
     </div>
-
   );
 }
