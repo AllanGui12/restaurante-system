@@ -18,7 +18,7 @@ export default function Produtos() {
   async function carregarProdutos() {
 
     const response = await fetch(
-      'https://SEU-LINK-RENDER.onrender.com/produtos'
+      'https://restaurante-api-2.onrender.com/produtos'
     );
 
     const data = await response.json();
@@ -33,7 +33,7 @@ export default function Produtos() {
     }
 
     await fetch(
-      'https://SEU-LINK-RENDER.onrender.com/produtos',
+      'https://restaurante-api-2.onrender.com/produtos',
       {
         method: 'POST',
 
@@ -65,7 +65,7 @@ export default function Produtos() {
     if (!confirmar) return;
 
     await fetch(
-      `https://SEU-LINK-RENDER.onrender.com/produtos/${id}`,
+      `https://restaurante-api-2.onrender.com/produtos/${id}`,
       {
         method: 'DELETE',
       }
