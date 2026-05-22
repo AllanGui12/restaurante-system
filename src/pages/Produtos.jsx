@@ -80,7 +80,7 @@ export default function Produtos() {
 
   return (
 
-    <div className="bg-[#050816] min-h-screen p-6 text-white">
+    <div className="bg-[#050816] min-h-screen p-6 text-zinc-300">
 
       <h1 className="text-4xl font-bold mb-8">
         Produtos
@@ -103,7 +103,7 @@ export default function Produtos() {
               px-5
               py-4
               outline-none
-              text-white
+              text-zinc-300
               placeholder:text-zinc-500
             "
           />
@@ -121,7 +121,7 @@ export default function Produtos() {
               px-5
               py-4
               outline-none
-              text-white
+              text-zinc-300
               placeholder:text-zinc-500
             "
           />
@@ -139,7 +139,7 @@ export default function Produtos() {
               px-5
               py-4
               outline-none
-              text-white
+             text-zinc-300
               placeholder:text-zinc-500
             "
           />

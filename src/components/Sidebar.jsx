@@ -5,7 +5,7 @@ export default function Sidebar({
   sair,
 }) {
   return (
-    <div className="w-64 h-screen bg-gray-900 dark:bg-black text-white p-5 flex flex-col border-r border-gray-800">
+    <div className="w-64 h-screen bg-gray-900 dark:bg-black text-zinc-300 p-5 flex flex-col border-r border-gray-800">
       <h1 className="text-3xl font-bold mb-4">
         Restaurante
       </h1>
@@ -33,7 +33,7 @@ export default function Sidebar({
 
       <button
         onClick={sair}
-        className="bg-red-600 text-white px-4 py-3 rounded-2xl hover:bg-red-700"
+        className="bg-red-600 text-zinc-300 px-4 py-3 rounded-2xl hover:bg-red-700"
       >
         Sair
       </button>

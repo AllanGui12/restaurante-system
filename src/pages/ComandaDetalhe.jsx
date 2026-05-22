@@ -116,7 +116,7 @@ export default function ComandaDetalhe() {
             min="1"
           />
 
-          <button className="bg-green-600 text-white rounded-2xl px-4 py-3 hover:bg-green-700">
+          <button className="bg-green-600 text-zinc-300 rounded-2xl px-4 py-3 hover:bg-green-700">
             Adicionar
           </button>
 
