@@ -463,6 +463,58 @@ app.put('/itens/:id', (req, res) => {
 
 });
 
+app.get('/dashboard', (req, res) => {
+  db.all(
+    `
+    SELECT *
+    FROM comandas
+    WHERE status = 'FECHADA'
+    `,
+    [],
+    (err, comandas) => {
+      if (err) {
+        return res.status(500).json(err);
+      }
+
+      const totalVendido = comandas.reduce(
+        (total, comanda) =>
+          total + Number(comanda.total || 0),
+        0
+      );
+
+      const quantidadeVendas = comandas.length;
+
+      const ticketMedio =
+        quantidadeVendas > 0
+          ? totalVendido / quantidadeVendas
+          : 0;
+
+      const formasPagamento = {};
+
+      comandas.forEach((comanda) => {
+        const forma =
+          comanda.forma_pagamento || 'Não informado';
+
+        formasPagamento[forma] =
+          (formasPagamento[forma] || 0) +
+          Number(comanda.total || 0);
+      });
+
+      res.json({
+        totalVendido,
+        quantidadeVendas,
+        ticketMedio,
+        formasPagamento: Object.entries(formasPagamento).map(
+          ([nome, valor]) => ({
+            nome,
+            valor,
+          })
+        ),
+      });
+    }
+  );
+});
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
