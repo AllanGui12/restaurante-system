@@ -490,6 +490,46 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
+app.get('/caixa', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT *
+      FROM comandas
+      WHERE status = 'FECHADA'
+      AND DATE(data) = CURRENT_DATE
+    `);
+
+    const vendas = result.rows;
+
+    const total = vendas.reduce(
+      (acc, venda) => acc + Number(venda.total || 0),
+      0
+    );
+
+    const pagamentos = {};
+
+    vendas.forEach((venda) => {
+      const forma = venda.forma_pagamento || 'Não informado';
+
+      pagamentos[forma] =
+        (pagamentos[forma] || 0) + Number(venda.total || 0);
+    });
+
+    res.json({
+      total,
+      quantidade: vendas.length,
+      pagamentos: Object.entries(pagamentos).map(([nome, valor]) => ({
+        nome,
+        valor,
+      })),
+      vendas,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
