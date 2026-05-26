@@ -229,6 +229,8 @@ app.post('/comandas/:id/itens', (req, res) => {
   const comandaId = req.params.id;
   const { produto_id, quantidade } = req.body;
 
+  const qtd = Number(quantidade);
+
   db.get(
     `SELECT * FROM produtos WHERE id = ?`,
     [produto_id],
@@ -239,35 +241,99 @@ app.post('/comandas/:id/itens', (req, res) => {
         });
       }
 
-      const valor = Number(produto.preco) * Number(quantidade);
+      if (Number(produto.estoque) < qtd) {
+        return res.status(400).json({
+          erro: 'Estoque insuficiente'
+        });
+      }
 
-      db.run(
+      db.get(
         `
-        INSERT INTO itens_comanda
-        (comanda_id, produto_id, quantidade, valor)
-        VALUES (?, ?, ?, ?)
+        SELECT *
+        FROM itens_comanda
+        WHERE comanda_id = ?
+        AND produto_id = ?
         `,
-        [comandaId, produto_id, quantidade, valor],
-        function (err) {
-          if (err) {
-            console.log(err);
-            return res.status(500).json(err);
+        [comandaId, produto_id],
+        (errItem, itemExistente) => {
+          if (errItem) {
+            return res.status(500).json(errItem);
           }
+
+          if (itemExistente) {
+            const novaQuantidade =
+              Number(itemExistente.quantidade) + qtd;
+
+            const novoValor =
+              Number(produto.preco) * novaQuantidade;
+
+            db.run(
+              `
+              UPDATE itens_comanda
+              SET quantidade = ?,
+                  valor = ?
+              WHERE id = ?
+              `,
+              [novaQuantidade, novoValor, itemExistente.id],
+              function (err) {
+                if (err) {
+                  return res.status(500).json(err);
+                }
+
+                db.run(
+                  `
+                  UPDATE produtos
+                  SET estoque = estoque - ?
+                  WHERE id = ?
+                  `,
+                  [qtd, produto_id],
+                  function (err) {
+                    if (err) {
+                      return res.status(500).json(err);
+                    }
+
+                    atualizarTotalComanda(comandaId, res);
+                  }
+                );
+              }
+            );
+
+            return;
+          }
+
+          const valor = Number(produto.preco) * qtd;
 
           db.run(
             `
-            UPDATE comandas
-            SET total = total + ?
-            WHERE id = ?
+            INSERT INTO itens_comanda (
+              comanda_id,
+              produto_id,
+              quantidade,
+              valor
+            )
+            VALUES (?, ?, ?, ?)
             `,
-            [valor, comandaId],
+            [comandaId, produto_id, qtd, valor],
             function (err) {
               if (err) {
-                console.log(err);
                 return res.status(500).json(err);
               }
 
-              res.json({ sucesso: true });
+              db.run(
+                `
+                UPDATE produtos
+                SET estoque = estoque - ?
+                WHERE id = ?
+                `,
+                [qtd, produto_id],
+                function (err) {
+                  if (err) {
+                    return res.status(500).json(err);
+                  }
+
+                  atualizarTotalComanda(comandaId, res);
+                }
+              );
             }
           );
         }
@@ -370,101 +436,107 @@ function atualizarTotalComanda(comandaId, res) {
 }
 
 app.put('/itens/:id', (req, res) => {
-
   const itemId = req.params.id;
-
   const { quantidade } = req.body;
+
+  const novaQuantidade = Number(quantidade);
 
   db.get(
     `
     SELECT
       itens_comanda.*,
-      produtos.preco
-
+      produtos.preco,
+      produtos.estoque
     FROM itens_comanda
-
     JOIN produtos
-      ON produtos.id =
-      itens_comanda.produto_id
-
+      ON produtos.id = itens_comanda.produto_id
     WHERE itens_comanda.id = ?
     `,
     [itemId],
-
     (err, item) => {
-
       if (err || !item) {
-
         return res.status(404).json({
           erro: 'Item não encontrado'
         });
-
       }
 
-      if (quantidade <= 0) {
+      const quantidadeAtual = Number(item.quantidade);
+      const diferenca = novaQuantidade - quantidadeAtual;
 
+      if (diferenca > 0 && Number(item.estoque) < diferenca) {
+        return res.status(400).json({
+          erro: 'Estoque insuficiente'
+        });
+      }
+
+      if (novaQuantidade <= 0) {
         db.run(
           `
           DELETE FROM itens_comanda
           WHERE id = ?
           `,
           [itemId],
-
-          function(err) {
-
+          function (err) {
             if (err) {
               return res.status(500).json(err);
             }
 
-            atualizarTotalComanda(
-              item.comanda_id,
-              res
-            );
+            db.run(
+              `
+              UPDATE produtos
+              SET estoque = estoque + ?
+              WHERE id = ?
+              `,
+              [quantidadeAtual, item.produto_id],
+              function (err) {
+                if (err) {
+                  return res.status(500).json(err);
+                }
 
+                atualizarTotalComanda(item.comanda_id, res);
+              }
+            );
           }
         );
 
         return;
-
       }
 
       const novoValor =
-        Number(item.preco) *
-        Number(quantidade);
+        Number(item.preco) * novaQuantidade;
 
       db.run(
         `
         UPDATE itens_comanda
-
-        SET
-          quantidade = ?,
-          valor = ?
-
+        SET quantidade = ?,
+            valor = ?
         WHERE id = ?
         `,
-        [
-          quantidade,
-          novoValor,
-          itemId
-        ],
-
-        function(err) {
-
+        [novaQuantidade, novoValor, itemId],
+        function (err) {
           if (err) {
             return res.status(500).json(err);
           }
 
-          atualizarTotalComanda(
-            item.comanda_id,
-            res
-          );
+          db.run(
+            `
+            UPDATE produtos
+            SET estoque = estoque - ?
+            WHERE id = ?
+            `,
+            [diferenca, item.produto_id],
+            function (err) {
+              if (err) {
+                return res.status(500).json(err);
+              }
 
+              atualizarTotalComanda(item.comanda_id, res);
+            }
+          );
         }
       );
-
     }
   );
-
 });
 
 app.get('/dashboard', (req, res) => {
