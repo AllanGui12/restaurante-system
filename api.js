@@ -163,11 +163,15 @@ app.get('/comandas', (req, res) => {
       db.all(
         `
         SELECT
-          itens_comanda.comanda_id,
-          produtos.nome,
-          itens_comanda.quantidade
-        FROM itens_comanda
-        JOIN produtos ON produtos.id = itens_comanda.produto_id
+  itens_comanda.id,
+  itens_comanda.comanda_id,
+  itens_comanda.produto_id,
+  produtos.nome,
+  itens_comanda.quantidade,
+  itens_comanda.valor
+FROM itens_comanda
+JOIN produtos
+  ON produtos.id = itens_comanda.produto_id
         `,
         [],
         (errItens, itens) => {

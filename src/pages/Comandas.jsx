@@ -12,6 +12,9 @@ export default function Comandas() {
   const [produtoSelecionado, setProdutoSelecionado] = useState('');
   const [quantidade, setQuantidade] = useState(1);
 
+  const [modalPagamentoAberto, setModalPagamentoAberto] = useState(false);
+  const [comandaParaFechar, setComandaParaFechar] = useState(null);
+
   async function carregarComandas() {
     try {
       const response = await fetch(`${API_URL}/comandas`);
@@ -72,21 +75,29 @@ export default function Comandas() {
     carregarComandas();
   }
 
-  async function fecharComanda(id) {
-    const forma_pagamento = window.prompt(
-      'Forma de pagamento: PIX, CREDITO, DEBITO ou DINHEIRO'
-    );
+  function abrirModalPagamento(id) {
+  setComandaParaFechar(id);
+  setModalPagamentoAberto(true);
+}
 
-    if (!forma_pagamento) return;
+async function fecharComanda(forma_pagamento) {
+  if (!comandaParaFechar) return;
 
-    await fetch(`${API_URL}/comandas/${id}/fechar`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ forma_pagamento }),
-    });
+  await fetch(`${API_URL}/comandas/${comandaParaFechar}/fechar`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      forma_pagamento,
+    }),
+  });
 
-    carregarComandas();
-  }
+  setModalPagamentoAberto(false);
+  setComandaParaFechar(null);
+
+  carregarComandas();
+}
 
   useEffect(() => {
     carregarComandas();
@@ -243,11 +254,11 @@ export default function Comandas() {
 
             <div className="mt-8 flex justify-end">
               <button
-                onClick={() => fecharComanda(comanda.id)}
-                className="bg-red-500 hover:bg-red-600 rounded-2xl px-8 py-4 font-bold"
-              >
-                Fechar
-              </button>
+  onClick={() => abrirModalPagamento(comanda.id)}
+  className="bg-red-500 hover:bg-red-600 rounded-2xl px-8 py-4 font-bold"
+>
+  Fechar
+</button>
             </div>
           </div>
         ))}
@@ -276,6 +287,60 @@ export default function Comandas() {
           </div>
         ))}
       </div>
+
+{modalPagamentoAberto && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-8 w-full max-w-md">
+      <h2 className="text-3xl font-bold mb-4">
+        Forma de pagamento
+      </h2>
+
+      <p className="text-zinc-400 mb-6">
+        Escolha como a comanda será fechada.
+      </p>
+
+      <div className="grid grid-cols-1 gap-4">
+        <button
+          onClick={() => fecharComanda('PIX')}
+          className="bg-green-500 hover:bg-green-600 rounded-2xl py-4 font-bold"
+        >
+          PIX
+        </button>
+
+        <button
+          onClick={() => fecharComanda('CREDITO')}
+          className="bg-blue-600 hover:bg-blue-700 rounded-2xl py-4 font-bold"
+        >
+          Crédito
+        </button>
+
+        <button
+          onClick={() => fecharComanda('DEBITO')}
+          className="bg-purple-600 hover:bg-purple-700 rounded-2xl py-4 font-bold"
+        >
+          Débito
+        </button>
+
+        <button
+          onClick={() => fecharComanda('DINHEIRO')}
+          className="bg-yellow-500 hover:bg-yellow-600 rounded-2xl py-4 font-bold text-black"
+        >
+          Dinheiro
+        </button>
+      </div>
+
+      <button
+        onClick={() => {
+          setModalPagamentoAberto(false);
+          setComandaParaFechar(null);
+        }}
+        className="mt-6 w-full bg-red-500 hover:bg-red-600 rounded-2xl py-4 font-bold"
+      >
+        Cancelar
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 }
