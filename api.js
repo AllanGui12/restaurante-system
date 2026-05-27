@@ -530,6 +530,26 @@ app.get('/caixa', async (req, res) => {
   }
 });
 
+app.get('/relatorio-vendas', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT
+        DATE(data) AS dia,
+        COUNT(*) AS quantidade,
+        SUM(total) AS total
+      FROM comandas
+      WHERE status = 'FECHADA'
+      GROUP BY DATE(data)
+      ORDER BY dia DESC
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
