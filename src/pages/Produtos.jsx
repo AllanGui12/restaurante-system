@@ -14,6 +14,7 @@ export default function Produtos() {
 
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
+  const [custo, setCusto] = useState('');
   const [estoque, setEstoque] = useState('');
 
   const [editandoId, setEditandoId] = useState(null);
@@ -33,6 +34,7 @@ export default function Produtos() {
     setEditandoId(produto.id);
     setNome(produto.nome);
     setPreco(produto.preco);
+    setCusto(produto.custo || '');
     setEstoque(produto.estoque);
   }
 
@@ -40,6 +42,7 @@ export default function Produtos() {
     setEditandoId(null);
     setNome('');
     setPreco('');
+    setCusto('');
     setEstoque('');
   }
 
@@ -57,6 +60,7 @@ export default function Produtos() {
         body: JSON.stringify({
           nome,
           preco,
+          custo: custo || 0,
           estoque,
         }),
       });
@@ -74,6 +78,7 @@ export default function Produtos() {
       body: JSON.stringify({
         nome,
         preco,
+        custo: custo || 0,
         estoque,
       }),
     });
@@ -107,7 +112,7 @@ export default function Produtos() {
       </h1>
 
       <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <input
             type="text"
             placeholder="Nome do produto"
@@ -118,9 +123,17 @@ export default function Produtos() {
 
           <input
             type="number"
-            placeholder="Preço"
+            placeholder="Preço de venda"
             value={preco}
             onChange={(e) => setPreco(e.target.value)}
+            className="bg-[#0A0F1F] border border-zinc-700 rounded-2xl px-5 py-4 outline-none text-white placeholder:text-zinc-500"
+          />
+
+          <input
+            type="number"
+            placeholder="Custo opcional"
+            value={custo}
+            onChange={(e) => setCusto(e.target.value)}
             className="bg-[#0A0F1F] border border-zinc-700 rounded-2xl px-5 py-4 outline-none text-white placeholder:text-zinc-500"
           />
 
@@ -152,57 +165,71 @@ export default function Produtos() {
       </div>
 
       <div className="space-y-6">
-        {produtos.map((produto) => (
-          <div
-            key={produto.id}
-            className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-6 flex justify-between items-center"
-          >
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 rounded-full border border-zinc-700 flex items-center justify-center">
-                <Package
-                  size={36}
-                  className="text-blue-500"
-                />
+        {produtos.map((produto) => {
+          const precoVenda = Number(produto.preco || 0);
+          const custoProduto = Number(produto.custo || 0);
+          const lucroUnitario = precoVenda - custoProduto;
+
+          return (
+            <div
+              key={produto.id}
+              className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-6 flex justify-between items-center"
+            >
+              <div className="flex items-center gap-6">
+                <div className="w-20 h-20 rounded-full border border-zinc-700 flex items-center justify-center">
+                  <Package
+                    size={36}
+                    className="text-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <h2 className="text-3xl font-bold">
+                    {produto.nome}
+                  </h2>
+
+                  <p className="text-blue-500 text-2xl font-bold mt-2">
+                    Venda: R$ {precoVenda.toFixed(2)}
+                  </p>
+
+                  <p className="text-yellow-400 text-lg font-bold mt-1">
+                    Custo: R$ {custoProduto.toFixed(2)}
+                  </p>
+
+                  <p className="text-green-400 text-lg font-bold mt-1">
+                    Lucro unitário: R$ {lucroUnitario.toFixed(2)}
+                  </p>
+
+                  <p
+                    className={`mt-2 text-xl font-bold ${
+                      Number(produto.estoque) > 0
+                        ? 'text-green-400'
+                        : 'text-red-500'
+                    }`}
+                  >
+                    {produto.estoque} unidades
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h2 className="text-3xl font-bold">
-                  {produto.nome}
-                </h2>
-
-                <p className="text-blue-500 text-2xl font-bold mt-2">
-                  R$ {Number(produto.preco).toFixed(2)}
-                </p>
-
-                <p
-                  className={`mt-2 text-xl font-bold ${
-                    Number(produto.estoque) > 0
-                      ? 'text-green-400'
-                      : 'text-red-500'
-                  }`}
+              <div className="flex gap-4">
+                <button
+                  onClick={() => editarProduto(produto)}
+                  className="bg-blue-600 hover:bg-blue-700 w-16 h-16 rounded-2xl flex items-center justify-center"
                 >
-                  {produto.estoque} unidades
-                </p>
+                  <Pencil size={24} />
+                </button>
+
+                <button
+                  onClick={() => excluirProduto(produto.id)}
+                  className="bg-red-500 hover:bg-red-600 w-16 h-16 rounded-2xl flex items-center justify-center"
+                >
+                  <Trash2 size={24} />
+                </button>
               </div>
             </div>
-
-            <div className="flex gap-4">
-              <button
-                onClick={() => editarProduto(produto)}
-                className="bg-blue-600 hover:bg-blue-700 w-16 h-16 rounded-2xl flex items-center justify-center"
-              >
-                <Pencil size={24} />
-              </button>
-
-              <button
-                onClick={() => excluirProduto(produto.id)}
-                className="bg-red-500 hover:bg-red-600 w-16 h-16 rounded-2xl flex items-center justify-center"
-              >
-                <Trash2 size={24} />
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

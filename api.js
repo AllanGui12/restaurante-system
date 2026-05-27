@@ -21,13 +21,14 @@ const db = new Pool({
 
 async function criarTabelas() {
   await db.query(`
-    CREATE TABLE IF NOT EXISTS produtos (
-      id SERIAL PRIMARY KEY,
-      nome TEXT,
-      preco NUMERIC(10,2),
-      estoque INTEGER DEFAULT 0
-    )
-  `);
+  CREATE TABLE IF NOT EXISTS produtos (
+    id SERIAL PRIMARY KEY,
+    nome TEXT,
+    preco NUMERIC(10,2),
+    custo NUMERIC(10,2) DEFAULT 0,
+    estoque INTEGER DEFAULT 0
+  )
+`);
 
   await db.query(`
     CREATE TABLE IF NOT EXISTS comandas (
@@ -50,6 +51,11 @@ async function criarTabelas() {
       valor NUMERIC(10,2)
     )
   `);
+
+  await db.query(`
+  ALTER TABLE produtos
+  ADD COLUMN IF NOT EXISTS custo NUMERIC(10,2) DEFAULT 0
+`);
 }
 
 criarTabelas();
@@ -87,15 +93,15 @@ app.get('/produtos', async (req, res) => {
 
 app.post('/produtos', async (req, res) => {
   try {
-    const { nome, preco, estoque } = req.body;
+    const { nome, preco, custo, estoque } = req.body;
 
     const result = await db.query(
       `
-      INSERT INTO produtos (nome, preco, estoque)
-      VALUES ($1, $2, $3)
+      INSERT INTO produtos (nome, preco, custo, estoque)
+      VALUES ($1, $2, $3, $4)
       RETURNING *
       `,
-      [nome, preco, estoque]
+      [nome, preco, custo || 0, estoque]
     );
 
     res.json(result.rows[0]);
@@ -108,17 +114,18 @@ app.post('/produtos', async (req, res) => {
 app.put('/produtos/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, preco, estoque } = req.body;
+    const { nome, preco, custo, estoque } = req.body;
 
     await db.query(
       `
       UPDATE produtos
       SET nome = $1,
           preco = $2,
-          estoque = $3
-      WHERE id = $4
+          custo = $3,
+          estoque = $4
+      WHERE id = $5
       `,
-      [nome, preco, estoque, id]
+      [nome, preco, custo || 0, estoque, id]
     );
 
     res.json({ sucesso: true });
