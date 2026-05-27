@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const API_URL = 'https://restaurante-api-2.onrender.com';
 
@@ -40,9 +42,48 @@ export default function Caixa() {
     carregarRelatorio();
   }, []);
 
+  function gerarPDF() {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text('Relatório de Vendas', 14, 20);
+
+  doc.setFontSize(12);
+  doc.text(`Total do Dia: R$ ${Number(caixa.total).toFixed(2)}`, 14, 32);
+  doc.text(`Vendas Fechadas: ${caixa.quantidade}`, 14, 40);
+  doc.text(
+    `Ticket Médio: R$ ${
+      caixa.quantidade > 0
+        ? Number(caixa.total / caixa.quantidade).toFixed(2)
+        : '0.00'
+    }`,
+    14,
+    48
+  );
+
+  autoTable(doc, {
+    startY: 60,
+    head: [['Data', 'Quantidade', 'Total']],
+    body: relatorio.map((dia) => [
+      new Date(dia.dia).toLocaleDateString('pt-BR'),
+      dia.quantidade,
+      `R$ ${Number(dia.total || 0).toFixed(2)}`,
+    ]),
+  });
+
+  doc.save('relatorio-vendas.pdf');
+}
+
   return (
     <div className="bg-[#050816] min-h-screen text-white p-10">
       <h1 className="text-5xl font-bold mb-3">Caixa</h1>
+
+      <button
+  onClick={gerarPDF}
+  className="bg-green-500 hover:bg-green-600 rounded-2xl px-6 py-3 font-bold mb-8"
+>
+  Gerar PDF
+</button>
 
       <p className="text-zinc-400 mb-10">
         Resumo financeiro das vendas fechadas hoje
