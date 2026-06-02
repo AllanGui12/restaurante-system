@@ -279,6 +279,32 @@ async function fecharComanda(forma_pagamento) {
                 Pagamento: {comanda.forma_pagamento || 'Não informado'}
               </p>
               <p className="text-blue-400 font-bold">{comanda.status}</p>
+
+<div className="mt-4 space-y-2">
+  <p className="font-bold text-zinc-300">
+    Itens do pedido:
+  </p>
+
+  {comanda.itens?.length > 0 ? (
+    comanda.itens.map((item) => (
+      <div
+        key={item.id}
+        className="bg-[#070D1A] border border-zinc-800 rounded-xl p-3 flex justify-between"
+      >
+        <span>{item.nome}</span>
+
+        <span className="text-zinc-400">
+          {item.quantidade}x
+        </span>
+      </div>
+    ))
+  ) : (
+    <p className="text-zinc-500">
+      Nenhum item registrado
+    </p>
+  )}
+</div>
+
             </div>
 
             <p className="text-3xl font-bold text-green-400">
