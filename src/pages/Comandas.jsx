@@ -99,6 +99,34 @@ async function fecharComanda(forma_pagamento) {
   carregarComandas();
 }
 
+async function excluirComanda(id) {
+  const confirmar = window.confirm(
+    'Deseja excluir esta comanda do histórico?'
+  );
+
+  if (!confirmar) return;
+
+  await fetch(`${API_URL}/comandas/${id}`, {
+    method: 'DELETE',
+  });
+
+  carregarComandas();
+}
+
+async function excluirComanda(id) {
+  const confirmar = window.confirm(
+    'Deseja excluir esta comanda do histórico?'
+  );
+
+  if (!confirmar) return;
+
+  await fetch(`${API_URL}/comandas/${id}`, {
+    method: 'DELETE',
+  });
+
+  carregarComandas();
+}
+
   useEffect(() => {
     carregarComandas();
     carregarProdutos();
@@ -307,9 +335,18 @@ async function fecharComanda(forma_pagamento) {
 
             </div>
 
-            <p className="text-3xl font-bold text-green-400">
-              R$ {Number(comanda.total || 0).toFixed(2)}
-            </p>
+           <div className="flex flex-col items-end gap-3">
+  <p className="text-3xl font-bold text-green-400">
+    R$ {Number(comanda.total || 0).toFixed(2)}
+  </p>
+
+  <button
+    onClick={() => excluirComanda(comanda.id)}
+    className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-xl font-bold"
+  >
+    Excluir
+  </button>
+</div>
           </div>
         ))}
       </div>

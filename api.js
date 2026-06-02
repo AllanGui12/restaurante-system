@@ -557,6 +557,22 @@ app.get('/relatorio-vendas', async (req, res) => {
   }
 });
 
+app.delete('/comandas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await db.query(
+      'DELETE FROM comandas WHERE id = $1',
+      [id]
+    );
+
+    res.json({ sucesso: true });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
