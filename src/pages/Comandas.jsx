@@ -15,6 +15,10 @@ export default function Comandas() {
   const [modalPagamentoAberto, setModalPagamentoAberto] = useState(false);
   const [comandaParaFechar, setComandaParaFechar] = useState(null);
 
+  const [formaPagamento, setFormaPagamento] = useState('PIX');
+  const [valorPagamento, setValorPagamento] = useState('');
+  const [pagamentos, setPagamentos] = useState([]);
+
   async function carregarComandas() {
     try {
       const response = await fetch(`${API_URL}/comandas`);
@@ -78,10 +82,49 @@ export default function Comandas() {
   function abrirModalPagamento(id) {
   setComandaParaFechar(id);
   setModalPagamentoAberto(true);
+  setFormaPagamento('PIX');
+  setValorPagamento('');
+  setPagamentos([]);
 }
 
-async function fecharComanda(forma_pagamento) {
+function adicionarPagamento() {
+  if (!valorPagamento || Number(valorPagamento) <= 0) return;
+
+  setPagamentos([
+    ...pagamentos,
+    {
+      forma_pagamento: formaPagamento,
+      valor: Number(valorPagamento),
+    },
+  ]);
+
+  setValorPagamento('');
+}
+
+function removerPagamento(index) {
+  setPagamentos(
+    pagamentos.filter((_, i) => i !== index)
+  );
+}
+
+async function fecharComanda() {
   if (!comandaParaFechar) return;
+
+  const comanda = comandas.find(
+    (c) => c.id === comandaParaFechar
+  );
+
+  const total = Number(comanda?.total || 0);
+
+  const totalPago = pagamentos.reduce(
+    (acc, pagamento) => acc + Number(pagamento.valor),
+    0
+  );
+
+  if (Number(totalPago.toFixed(2)) !== Number(total.toFixed(2))) {
+    alert('A soma dos pagamentos precisa ser igual ao total da comanda.');
+    return;
+  }
 
   await fetch(`${API_URL}/comandas/${comandaParaFechar}/fechar`, {
     method: 'PUT',
@@ -89,12 +132,14 @@ async function fecharComanda(forma_pagamento) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      forma_pagamento,
+      pagamentos,
     }),
   });
 
   setModalPagamentoAberto(false);
   setComandaParaFechar(null);
+  setPagamentos([]);
+  setValorPagamento('');
 
   carregarComandas();
 }
@@ -303,9 +348,19 @@ async function excluirComanda(id) {
             <div>
               <h3 className="text-2xl font-bold">{comanda.cliente}</h3>
               <p className="text-zinc-400">Tipo: {comanda.tipo}</p>
-              <p className="text-zinc-400">
-                Pagamento: {comanda.forma_pagamento || 'Não informado'}
-              </p>
+              <div className="text-zinc-400">
+  <p>Pagamento:</p>
+
+  {comanda.pagamentos?.length > 0 ? (
+    comanda.pagamentos.map((pagamento) => (
+      <p key={pagamento.id}>
+        {pagamento.forma_pagamento} - R$ {Number(pagamento.valor).toFixed(2)}
+      </p>
+    ))
+  ) : (
+    <p>{comanda.forma_pagamento || 'Não informado'}</p>
+  )}
+</div>
               <p className="text-blue-400 font-bold">{comanda.status}</p>
 
 <div className="mt-4 space-y-2">
@@ -351,59 +406,109 @@ async function excluirComanda(id) {
         ))}
       </div>
 
-{modalPagamentoAberto && (
-  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-    <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-8 w-full max-w-md">
-      <h2 className="text-3xl font-bold mb-4">
-        Forma de pagamento
-      </h2>
+{modalPagamentoAberto && (() => {
+  const comanda = comandas.find(
+    (c) => c.id === comandaParaFechar
+  );
 
-      <p className="text-zinc-400 mb-6">
-        Escolha como a comanda será fechada.
-      </p>
+  const total = Number(comanda?.total || 0);
 
-      <div className="grid grid-cols-1 gap-4">
+  const totalPago = pagamentos.reduce(
+    (acc, pagamento) => acc + Number(pagamento.valor),
+    0
+  );
+
+  const restante = total - totalPago;
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-8 w-full max-w-lg">
+        <h2 className="text-3xl font-bold mb-4">
+          Fechar Comanda
+        </h2>
+
+        <p className="text-zinc-400 mb-2">
+          Total: R$ {total.toFixed(2)}
+        </p>
+
+        <p className="text-green-400 font-bold mb-6">
+          Restante: R$ {restante.toFixed(2)}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <select
+            value={formaPagamento}
+            onChange={(e) => setFormaPagamento(e.target.value)}
+            className="bg-[#070D1A] border border-zinc-700 rounded-xl px-4 py-3 text-white"
+          >
+            <option value="PIX">PIX</option>
+            <option value="CREDITO">Crédito</option>
+            <option value="DEBITO">Débito</option>
+            <option value="DINHEIRO">Dinheiro</option>
+          </select>
+
+          <input
+            type="number"
+            placeholder="Valor"
+            value={valorPagamento}
+            onChange={(e) => setValorPagamento(e.target.value)}
+            className="bg-[#070D1A] border border-zinc-700 rounded-xl px-4 py-3 text-white"
+          />
+        </div>
+
         <button
-          onClick={() => fecharComanda('PIX')}
-          className="bg-green-500 hover:bg-green-600 rounded-2xl py-4 font-bold"
+          onClick={adicionarPagamento}
+          className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl py-3 font-bold mb-6"
         >
-          PIX
+          Adicionar Pagamento
+        </button>
+
+        <div className="space-y-3 mb-6">
+          {pagamentos.map((pagamento, index) => (
+            <div
+              key={index}
+              className="bg-[#070D1A] border border-zinc-800 rounded-xl p-3 flex justify-between items-center"
+            >
+              <span>{pagamento.forma_pagamento}</span>
+
+              <div className="flex items-center gap-3">
+                <span className="text-green-400 font-bold">
+                  R$ {Number(pagamento.valor).toFixed(2)}
+                </span>
+
+                <button
+                  onClick={() => removerPagamento(index)}
+                  className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded-lg font-bold"
+                >
+                  X
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={fecharComanda}
+          className="w-full bg-green-500 hover:bg-green-600 rounded-xl py-4 font-bold mb-3"
+        >
+          Fechar Comanda
         </button>
 
         <button
-          onClick={() => fecharComanda('CREDITO')}
-          className="bg-blue-600 hover:bg-blue-700 rounded-2xl py-4 font-bold"
+          onClick={() => {
+            setModalPagamentoAberto(false);
+            setComandaParaFechar(null);
+            setPagamentos([]);
+            setValorPagamento('');
+          }}
+          className="w-full bg-red-500 hover:bg-red-600 rounded-xl py-4 font-bold"
         >
-          Crédito
-        </button>
-
-        <button
-          onClick={() => fecharComanda('DEBITO')}
-          className="bg-purple-600 hover:bg-purple-700 rounded-2xl py-4 font-bold"
-        >
-          Débito
-        </button>
-
-        <button
-          onClick={() => fecharComanda('DINHEIRO')}
-          className="bg-yellow-500 hover:bg-yellow-600 rounded-2xl py-4 font-bold text-black"
-        >
-          Dinheiro
+          Cancelar
         </button>
       </div>
-
-      <button
-        onClick={() => {
-          setModalPagamentoAberto(false);
-          setComandaParaFechar(null);
-        }}
-        className="mt-6 w-full bg-red-500 hover:bg-red-600 rounded-2xl py-4 font-bold"
-      >
-        Cancelar
-      </button>
     </div>
-  </div>
-)}
+  );
+})()}
     </div>
   );
 }

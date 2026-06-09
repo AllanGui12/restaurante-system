@@ -73,6 +73,16 @@ await db.query(`
   VALUES (1, '', '', '', '', 5)
   ON CONFLICT (id) DO NOTHING
 `);
+
+await db.query(`
+  CREATE TABLE IF NOT EXISTS pagamentos_comanda (
+    id SERIAL PRIMARY KEY,
+    comanda_id INTEGER REFERENCES comandas(id) ON DELETE CASCADE,
+    forma_pagamento TEXT,
+    valor NUMERIC(10,2),
+    data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 }
 
 criarTabelas();
@@ -175,6 +185,7 @@ app.get('/comandas', async (req, res) => {
     );
 
     const itensResult = await db.query(`
+      
       SELECT
         itens_comanda.id,
         itens_comanda.comanda_id,
@@ -187,15 +198,26 @@ app.get('/comandas', async (req, res) => {
         ON produtos.id = itens_comanda.produto_id
     `);
 
+    const pagamentosResult = await db.query(`
+  SELECT *
+  FROM pagamentos_comanda
+`);
+
     const comandas = comandasResult.rows;
     const itens = itensResult.rows;
+    const pagamentos = pagamentosResult.rows;
 
     const resultado = comandas.map((comanda) => ({
-      ...comanda,
-      itens: itens.filter(
-        (item) => item.comanda_id === comanda.id
-      ),
-    }));
+  ...comanda,
+
+  itens: itens.filter(
+    (item) => item.comanda_id === comanda.id
+  ),
+
+  pagamentos: pagamentos.filter(
+    (pagamento) => pagamento.comanda_id === comanda.id
+  ),
+}));
 
     res.json(resultado);
   } catch (err) {
@@ -440,24 +462,102 @@ app.put('/itens/:id', async (req, res) => {
 });
 
 app.put('/comandas/:id/fechar', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { forma_pagamento } = req.body;
+  const client = await db.connect();
 
-    await db.query(
-      `
-      UPDATE comandas
-      SET status = 'FECHADA',
-          forma_pagamento = $1
-      WHERE id = $2
-      `,
-      [forma_pagamento || 'PIX', id]
+  try {
+    await client.query('BEGIN');
+
+    const { id } = req.params;
+    const { forma_pagamento, pagamentos } = req.body;
+
+    const comandaResult = await client.query(
+      'SELECT * FROM comandas WHERE id = $1',
+      [id]
     );
+
+    const comanda = comandaResult.rows[0];
+
+    if (!comanda) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        erro: 'Comanda não encontrada',
+      });
+    }
+
+    await client.query(
+      'DELETE FROM pagamentos_comanda WHERE comanda_id = $1',
+      [id]
+    );
+
+    if (Array.isArray(pagamentos) && pagamentos.length > 0) {
+      const totalPagamentos = pagamentos.reduce(
+        (acc, pagamento) => acc + Number(pagamento.valor || 0),
+        0
+      );
+
+      if (Number(totalPagamentos.toFixed(2)) !== Number(comanda.total)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          erro: 'A soma dos pagamentos precisa ser igual ao total da comanda',
+        });
+      }
+
+      for (const pagamento of pagamentos) {
+        await client.query(
+          `
+          INSERT INTO pagamentos_comanda (
+            comanda_id,
+            forma_pagamento,
+            valor
+          )
+          VALUES ($1, $2, $3)
+          `,
+          [id, pagamento.forma_pagamento, pagamento.valor]
+        );
+      }
+
+      await client.query(
+        `
+        UPDATE comandas
+        SET status = 'FECHADA',
+            forma_pagamento = $1
+        WHERE id = $2
+        `,
+        ['DIVIDIDO', id]
+      );
+    } else {
+      await client.query(
+        `
+        INSERT INTO pagamentos_comanda (
+          comanda_id,
+          forma_pagamento,
+          valor
+        )
+        VALUES ($1, $2, $3)
+        `,
+        [id, forma_pagamento || 'PIX', comanda.total]
+      );
+
+      await client.query(
+        `
+        UPDATE comandas
+        SET status = 'FECHADA',
+            forma_pagamento = $1
+        WHERE id = $2
+        `,
+        [forma_pagamento || 'PIX', id]
+      );
+    }
+
+    await client.query('COMMIT');
 
     res.json({ sucesso: true });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.log(err);
     res.status(500).json(err);
+  } finally {
+    client.release();
   }
 });
 
@@ -516,36 +616,39 @@ app.get('/dashboard', async (req, res) => {
 
 app.get('/caixa', async (req, res) => {
   try {
-    const result = await db.query(`
+    const vendasResult = await db.query(`
       SELECT *
       FROM comandas
       WHERE status = 'FECHADA'
-      AND DATE(data) = CURRENT_DATE
+      AND DATE(data AT TIME ZONE 'America/Sao_Paulo') =
+          DATE(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY data DESC
     `);
 
-    const vendas = result.rows;
+    const pagamentosResult = await db.query(`
+      SELECT
+        pagamentos_comanda.forma_pagamento AS nome,
+        SUM(pagamentos_comanda.valor) AS valor
+      FROM pagamentos_comanda
+      JOIN comandas
+        ON comandas.id = pagamentos_comanda.comanda_id
+      WHERE comandas.status = 'FECHADA'
+      AND DATE(comandas.data AT TIME ZONE 'America/Sao_Paulo') =
+          DATE(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+      GROUP BY pagamentos_comanda.forma_pagamento
+    `);
+
+    const vendas = vendasResult.rows;
 
     const total = vendas.reduce(
       (acc, venda) => acc + Number(venda.total || 0),
       0
     );
 
-    const pagamentos = {};
-
-    vendas.forEach((venda) => {
-      const forma = venda.forma_pagamento || 'Não informado';
-
-      pagamentos[forma] =
-        (pagamentos[forma] || 0) + Number(venda.total || 0);
-    });
-
     res.json({
       total,
       quantidade: vendas.length,
-      pagamentos: Object.entries(pagamentos).map(([nome, valor]) => ({
-        nome,
-        valor,
-      })),
+      pagamentos: pagamentosResult.rows,
       vendas,
     });
   } catch (err) {
@@ -558,12 +661,12 @@ app.get('/relatorio-vendas', async (req, res) => {
   try {
     const result = await db.query(`
       SELECT
-        DATE(data) AS dia,
+        DATE(data AT TIME ZONE 'America/Sao_Paulo') AS dia,
         COUNT(*) AS quantidade,
         SUM(total) AS total
       FROM comandas
       WHERE status = 'FECHADA'
-      GROUP BY DATE(data)
+      GROUP BY DATE(data AT TIME ZONE 'America/Sao_Paulo')
       ORDER BY dia DESC
     `);
 
