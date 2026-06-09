@@ -56,6 +56,23 @@ async function criarTabelas() {
   ALTER TABLE produtos
   ADD COLUMN IF NOT EXISTS custo NUMERIC(10,2) DEFAULT 0
 `);
+
+await db.query(`
+  CREATE TABLE IF NOT EXISTS configuracoes (
+    id SERIAL PRIMARY KEY,
+    nome_restaurante TEXT,
+    telefone TEXT,
+    endereco TEXT,
+    cnpj TEXT,
+    estoque_minimo INTEGER DEFAULT 5
+  )
+`);
+
+await db.query(`
+  INSERT INTO configuracoes (id, nome_restaurante, telefone, endereco, cnpj, estoque_minimo)
+  VALUES (1, '', '', '', '', 5)
+  ON CONFLICT (id) DO NOTHING
+`);
 }
 
 criarTabelas();
@@ -567,6 +584,56 @@ app.delete('/comandas/:id', async (req, res) => {
     );
 
     res.json({ sucesso: true });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
+app.get('/configuracoes', async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT * FROM configuracoes WHERE id = 1'
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
+app.put('/configuracoes', async (req, res) => {
+  try {
+    const {
+      nome_restaurante,
+      telefone,
+      endereco,
+      cnpj,
+      estoque_minimo
+    } = req.body;
+
+    const result = await db.query(
+      `
+      UPDATE configuracoes
+      SET nome_restaurante = $1,
+          telefone = $2,
+          endereco = $3,
+          cnpj = $4,
+          estoque_minimo = $5
+      WHERE id = 1
+      RETURNING *
+      `,
+      [
+        nome_restaurante,
+        telefone,
+        endereco,
+        cnpj,
+        estoque_minimo || 5
+      ]
+    );
+
+    res.json(result.rows[0]);
   } catch (err) {
     console.log(err);
     res.status(500).json(err);

@@ -27,6 +27,12 @@ export default function Sidebar({
         <Link to="/caixa">Caixa</Link>
 
         {usuarioLogado.perfil === 'ADMIN' && (
+  <Link to="/configuracoes">
+    Configurações
+  </Link>
+)}
+
+        {usuarioLogado.perfil === 'ADMIN' && (
           <Link to="/estoque">Estoque</Link>
         )}
       </nav>

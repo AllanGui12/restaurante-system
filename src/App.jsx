@@ -15,6 +15,7 @@ import Produtos from './pages/Produtos';
 import Comandas from './pages/Comandas';
 import Caixa from './pages/Caixa';
 import Estoque from './pages/Estoque';
+import Configuracoes from './pages/Configuracoes';
 
 export default function App() {
   const [usuarioLogado, setUsuarioLogado] =
@@ -76,6 +77,11 @@ export default function App() {
               path="/caixa"
               element={<Caixa />}
             />
+
+            <Route
+  path="/configuracoes"
+  element={<Configuracoes />}
+/>
 
             <Route
               path="*"
