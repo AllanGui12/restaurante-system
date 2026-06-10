@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 import {
   Settings,
   Database,
@@ -6,13 +8,52 @@ import {
   Package,
   Users,
   Info,
-  Clock,
   Server,
   Save,
   RotateCcw
 } from 'lucide-react';
 
+const API_URL = 'https://restaurante-api-2.onrender.com';
+
 export default function Configuracoes() {
+  const [config, setConfig] = useState({
+    nome_restaurante: '',
+    telefone: '',
+    endereco: '',
+    cnpj: '',
+    estoque_minimo: 5,
+  });
+
+  async function carregarConfiguracoes() {
+    const response = await fetch(`${API_URL}/configuracoes`);
+    const data = await response.json();
+
+    setConfig({
+      nome_restaurante: data.nome_restaurante || '',
+      telefone: data.telefone || '',
+      endereco: data.endereco || '',
+      cnpj: data.cnpj || '',
+      estoque_minimo: data.estoque_minimo || 5,
+    });
+  }
+
+  async function salvarConfiguracoes() {
+    await fetch(`${API_URL}/configuracoes`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(config),
+    });
+
+    alert('Configurações salvas com sucesso!');
+    carregarConfiguracoes();
+  }
+
+  useEffect(() => {
+    carregarConfiguracoes();
+  }, []);
+
   return (
     <div className="bg-[#050816] min-h-screen text-white p-10">
       <div className="flex items-center gap-4 mb-10">
@@ -68,24 +109,18 @@ export default function Configuracoes() {
         <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-6">
           <div className="flex items-center gap-3 mb-6">
             <CloudUpload className="text-green-500" />
-            <h2 className="text-2xl font-bold">
-              Backup
-            </h2>
+            <h2 className="text-2xl font-bold">Backup</h2>
           </div>
 
           <div className="space-y-5">
             <div className="flex justify-between border-b border-zinc-800 pb-3">
               <span className="text-zinc-400">Último Backup</span>
-              <span className="text-green-400 font-bold">
-                A configurar
-              </span>
+              <span className="text-green-400 font-bold">A configurar</span>
             </div>
 
             <div className="flex justify-between border-b border-zinc-800 pb-3">
               <span className="text-zinc-400">Próximo Backup</span>
-              <span className="text-green-400 font-bold">
-                A configurar
-              </span>
+              <span className="text-green-400 font-bold">A configurar</span>
             </div>
 
             <div className="flex justify-between border-b border-zinc-800 pb-3">
@@ -120,25 +155,44 @@ export default function Configuracoes() {
           <div className="space-y-4">
             <input
               placeholder="Nome do restaurante"
+              value={config.nome_restaurante}
+              onChange={(e) =>
+                setConfig({ ...config, nome_restaurante: e.target.value })
+              }
               className="w-full bg-[#070D1A] border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
             />
 
             <input
               placeholder="Telefone"
+              value={config.telefone}
+              onChange={(e) =>
+                setConfig({ ...config, telefone: e.target.value })
+              }
               className="w-full bg-[#070D1A] border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
             />
 
             <input
               placeholder="Endereço"
+              value={config.endereco}
+              onChange={(e) =>
+                setConfig({ ...config, endereco: e.target.value })
+              }
               className="w-full bg-[#070D1A] border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
             />
 
             <input
               placeholder="CNPJ"
+              value={config.cnpj}
+              onChange={(e) =>
+                setConfig({ ...config, cnpj: e.target.value })
+              }
               className="w-full bg-[#070D1A] border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
             />
 
-            <button className="w-full bg-purple-600 hover:bg-purple-700 rounded-xl py-3 font-bold flex items-center justify-center gap-2">
+            <button
+              onClick={salvarConfiguracoes}
+              className="w-full bg-purple-600 hover:bg-purple-700 rounded-xl py-3 font-bold flex items-center justify-center gap-2"
+            >
               <Save size={18} />
               Salvar Alterações
             </button>
@@ -160,11 +214,17 @@ export default function Configuracoes() {
           <input
             type="number"
             placeholder="Quantidade mínima"
-            defaultValue={5}
+            value={config.estoque_minimo}
+            onChange={(e) =>
+              setConfig({ ...config, estoque_minimo: e.target.value })
+            }
             className="w-full bg-[#070D1A] border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none mb-4"
           />
 
-          <button className="w-full bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl py-3 font-bold">
+          <button
+            onClick={salvarConfiguracoes}
+            className="w-full bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl py-3 font-bold"
+          >
             Salvar Estoque Mínimo
           </button>
         </div>
