@@ -563,50 +563,39 @@ app.put('/comandas/:id/fechar', async (req, res) => {
 
 app.get('/dashboard', async (req, res) => {
   try {
-    const result = await db.query(
-      `
+    const comandasResult = await db.query(`
       SELECT *
       FROM comandas
       WHERE status = 'FECHADA'
-      `
-    );
+    `);
 
-    const comandas = result.rows;
+    const pagamentosResult = await db.query(`
+      SELECT
+        forma_pagamento AS nome,
+        SUM(valor) AS valor
+      FROM pagamentos_comanda
+      WHERE forma_pagamento IN ('PIX', 'DINHEIRO', 'CREDITO', 'DEBITO')
+      GROUP BY forma_pagamento
+      ORDER BY forma_pagamento
+    `);
+
+    const comandas = comandasResult.rows;
 
     const totalVendido = comandas.reduce(
-      (total, comanda) =>
-        total + Number(comanda.total || 0),
+      (total, comanda) => total + Number(comanda.total || 0),
       0
     );
 
     const quantidadeVendas = comandas.length;
 
     const ticketMedio =
-      quantidadeVendas > 0
-        ? totalVendido / quantidadeVendas
-        : 0;
-
-    const formasPagamento = {};
-
-    comandas.forEach((comanda) => {
-      const forma =
-        comanda.forma_pagamento || 'Não informado';
-
-      formasPagamento[forma] =
-        (formasPagamento[forma] || 0) +
-        Number(comanda.total || 0);
-    });
+      quantidadeVendas > 0 ? totalVendido / quantidadeVendas : 0;
 
     res.json({
       totalVendido,
       quantidadeVendas,
       ticketMedio,
-      formasPagamento: Object.entries(formasPagamento).map(
-        ([nome, valor]) => ({
-          nome,
-          valor,
-        })
-      ),
+      formasPagamento: pagamentosResult.rows,
     });
   } catch (err) {
     console.log(err);
