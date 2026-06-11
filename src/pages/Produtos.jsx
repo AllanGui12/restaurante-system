@@ -11,6 +11,7 @@ const API_URL = 'https://restaurante-api-2.onrender.com';
 
 export default function Produtos() {
   const [produtos, setProdutos] = useState([]);
+  const [pesquisa, setPesquisa] = useState('');
 
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
@@ -105,13 +106,27 @@ export default function Produtos() {
     carregarProdutos();
   }, []);
 
-  return (
-    <div className="bg-[#050816] min-h-screen p-6 text-white">
-      <h1 className="text-4xl font-bold mb-8">
-        Produtos
-      </h1>
+  const produtosFiltrados = produtos.filter((produto) =>
+  produto.nome
+    .toLowerCase()
+    .includes(pesquisa.toLowerCase())
+);
 
-      <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-6 mb-8">
+  return (
+  <div className="bg-[#050816] min-h-screen p-6 text-white">
+    <h1 className="text-4xl font-bold mb-8">
+      Produtos
+    </h1>
+
+    <input
+      type="text"
+      placeholder="Pesquisar produto..."
+      value={pesquisa}
+      onChange={(e) => setPesquisa(e.target.value)}
+      className="w-full bg-[#0A0F1F] border border-zinc-700 rounded-2xl px-5 py-4 outline-none text-white placeholder:text-zinc-500 mb-8"
+    />
+
+    <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-6 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <input
             type="text"
@@ -165,7 +180,7 @@ export default function Produtos() {
       </div>
 
       <div className="space-y-6">
-        {produtos.map((produto) => {
+        {produtosFiltrados.map((produto) => {
           const precoVenda = Number(produto.preco || 0);
           const custoProduto = Number(produto.custo || 0);
           const lucroUnitario = precoVenda - custoProduto;

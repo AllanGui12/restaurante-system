@@ -108,8 +108,8 @@ app.post('/login', (req, res) => {
 app.get('/produtos', async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT * FROM produtos ORDER BY id DESC'
-    );
+  'SELECT * FROM produtos ORDER BY nome ASC'
+);
 
     res.json(result.rows);
   } catch (err) {
