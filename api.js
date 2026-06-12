@@ -669,7 +669,7 @@ app.put('/caixa/fechar', async (req, res) => {
   }
 });
 
-app.get('/caixa', async (req, res) => {app.get('/caixa', async (req, res) => {
+app.get('/caixa', async (req, res) => {
   try {
     const caixaResult = await db.query(`
       SELECT *
