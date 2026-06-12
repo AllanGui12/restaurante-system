@@ -17,6 +17,7 @@ export default function Caixa() {
 
   const [valorInicial, setValorInicial] = useState('');
   const [relatorio, setRelatorio] = useState([]);
+  const [historicoCaixas, setHistoricoCaixas] = useState([]);
 
   async function carregarCaixa() {
     const response = await fetch(`${API_URL}/caixa`);
@@ -33,6 +34,13 @@ export default function Caixa() {
     });
   }
 
+  async function carregarHistoricoCaixas() {
+    const response = await fetch(`${API_URL}/caixas/historico`);
+    const data = await response.json();
+
+    setHistoricoCaixas(Array.isArray(data) ? data : []);
+  }
+
   async function abrirCaixa() {
     await fetch(`${API_URL}/caixa/abrir`, {
       method: 'POST',
@@ -42,6 +50,7 @@ export default function Caixa() {
 
     setValorInicial('');
     carregarCaixa();
+    carregarHistoricoCaixas();
   }
 
   async function fecharCaixa() {
@@ -56,6 +65,7 @@ export default function Caixa() {
     });
 
     carregarCaixa();
+    carregarHistoricoCaixas();
   }
 
   async function carregarRelatorio() {
@@ -68,6 +78,7 @@ export default function Caixa() {
   useEffect(() => {
     carregarCaixa();
     carregarRelatorio();
+    carregarHistoricoCaixas();
   }, []);
 
   function gerarPDF() {
@@ -104,6 +115,112 @@ export default function Caixa() {
     doc.save('relatorio-vendas.pdf');
   }
 
+  function formatarData(data) {
+    if (!data) return '-';
+
+    return new Date(data).toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+    });
+  }
+
+  function HistoricoCaixas() {
+    return (
+      <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-8 mt-10">
+        <h2 className="text-3xl font-bold mb-6">
+          Histórico de Caixas
+        </h2>
+
+        <div className="space-y-6">
+          {historicoCaixas.length === 0 && (
+            <p className="text-zinc-500">
+              Nenhum caixa fechado encontrado.
+            </p>
+          )}
+
+          {historicoCaixas.map((item) => {
+            const dinheiro = item.pagamentos?.find(
+              (p) => p.nome === 'DINHEIRO'
+            );
+
+            const dinheiroEsperado =
+              Number(item.valor_inicial || 0) +
+              Number(dinheiro?.valor || 0);
+
+            return (
+              <div
+                key={item.id}
+                className="bg-[#070D1A] border border-zinc-800 rounded-2xl p-5"
+              >
+                <div className="flex justify-between items-start gap-6 mb-4">
+                  <div>
+                    <h3 className="text-2xl font-bold">
+                      Caixa #{item.id}
+                    </h3>
+
+                    <p className="text-zinc-400 mt-2">
+                      Abertura: {formatarData(item.data_abertura)}
+                    </p>
+
+                    <p className="text-zinc-400">
+                      Fechamento: {formatarData(item.data_fechamento)}
+                    </p>
+
+                    <p className="text-zinc-400">
+                      Vendas: {item.quantidadeVendas}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-zinc-400">
+                      Valor Inicial
+                    </p>
+
+                    <p className="text-yellow-400 text-xl font-bold mb-3">
+                      R$ {Number(item.valor_inicial || 0).toFixed(2)}
+                    </p>
+
+                    <p className="text-zinc-400">
+                      Total Vendido
+                    </p>
+
+                    <p className="text-green-400 text-2xl font-bold">
+                      R$ {Number(item.totalVendido || 0).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                  {item.pagamentos?.map((pagamento) => (
+                    <div
+                      key={pagamento.nome}
+                      className="bg-[#0B1120] border border-zinc-800 rounded-xl p-3 flex justify-between"
+                    >
+                      <span>{pagamento.nome}</span>
+
+                      <span className="text-green-400 font-bold">
+                        R$ {Number(pagamento.valor || 0).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 bg-[#0B1120] border border-zinc-800 rounded-xl p-3 flex justify-between">
+                  <span className="font-bold">
+                    Dinheiro esperado na gaveta
+                  </span>
+
+                  <span className="text-purple-400 font-bold">
+                    R$ {dinheiroEsperado.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   if (!caixa.aberto) {
     return (
       <div className="bg-[#050816] min-h-screen text-white p-10">
@@ -133,6 +250,8 @@ export default function Caixa() {
             Abrir Caixa
           </button>
         </div>
+
+        <HistoricoCaixas />
       </div>
     );
   }
@@ -251,6 +370,8 @@ export default function Caixa() {
           ))}
         </div>
       </div>
+
+      <HistoricoCaixas />
     </div>
   );
 }
