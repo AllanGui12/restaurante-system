@@ -836,6 +836,65 @@ app.put('/configuracoes', async (req, res) => {
   }
 });
 
+app.get('/caixas/historico', async (req, res) => {
+  try {
+    const caixasResult = await db.query(`
+      SELECT *
+      FROM caixas
+      WHERE status = 'FECHADO'
+      ORDER BY data_fechamento DESC
+    `);
+
+    const caixas = [];
+
+    for (const caixa of caixasResult.rows) {
+      const vendasResult = await db.query(
+        `
+        SELECT *
+        FROM comandas
+        WHERE status = 'FECHADA'
+        AND data >= $1
+        AND data <= $2
+        `,
+        [caixa.data_abertura, caixa.data_fechamento]
+      );
+
+      const pagamentosResult = await db.query(
+        `
+        SELECT
+          pagamentos_comanda.forma_pagamento AS nome,
+          SUM(pagamentos_comanda.valor) AS valor
+        FROM pagamentos_comanda
+        JOIN comandas
+          ON comandas.id = pagamentos_comanda.comanda_id
+        WHERE comandas.status = 'FECHADA'
+        AND comandas.data >= $1
+        AND comandas.data <= $2
+        GROUP BY pagamentos_comanda.forma_pagamento
+        `,
+        [caixa.data_abertura, caixa.data_fechamento]
+      );
+
+      const totalVendido = vendasResult.rows.reduce(
+        (acc, venda) => acc + Number(venda.total || 0),
+        0
+      );
+
+      caixas.push({
+        ...caixa,
+        totalVendido,
+        quantidadeVendas: vendasResult.rows.length,
+        pagamentos: pagamentosResult.rows,
+      });
+    }
+
+    res.json(caixas);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
