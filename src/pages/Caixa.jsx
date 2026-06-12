@@ -358,9 +358,17 @@ export default function Caixa() {
             >
               <div>
                 <p className="font-bold">{venda.cliente}</p>
-                <p className="text-zinc-400">
-                  {venda.forma_pagamento || 'Não informado'}
-                </p>
+                <div className="text-zinc-400">
+  {venda.pagamentos?.length > 0 ? (
+    venda.pagamentos.map((pagamento) => (
+      <p key={pagamento.id}>
+        {pagamento.forma_pagamento} - R$ {Number(pagamento.valor).toFixed(2)}
+      </p>
+    ))
+  ) : (
+    <p>{venda.forma_pagamento || 'Não informado'}</p>
+  )}
+</div>
               </div>
 
               <p className="text-green-400 font-bold text-xl">

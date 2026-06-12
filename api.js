@@ -526,15 +526,20 @@ app.put('/comandas/:id/fechar', async (req, res) => {
         );
       }
 
-      await client.query(
-        `
-        UPDATE comandas
-        SET status = 'FECHADA',
-            forma_pagamento = $1
-        WHERE id = $2
-        `,
-        ['DIVIDIDO', id]
-      );
+      const formaFinal =
+  pagamentos.length === 1
+    ? pagamentos[0].forma_pagamento
+    : 'DIVIDIDO';
+
+await client.query(
+  `
+  UPDATE comandas
+  SET status = 'FECHADA',
+      forma_pagamento = $1
+  WHERE id = $2
+  `,
+  [formaFinal, id]
+);
     } else {
       await client.query(
         `
@@ -721,6 +726,31 @@ app.get('/caixa', async (req, res) => {
 
     const vendas = vendasResult.rows;
 
+    const pagamentosVendasResult = await db.query(
+  `
+  SELECT
+    pagamentos_comanda.id,
+    pagamentos_comanda.comanda_id,
+    pagamentos_comanda.forma_pagamento,
+    pagamentos_comanda.valor
+  FROM pagamentos_comanda
+  JOIN comandas
+    ON comandas.id = pagamentos_comanda.comanda_id
+  WHERE comandas.status = 'FECHADA'
+  AND comandas.data >= $1
+  `,
+  [caixaAberto.data_abertura]
+);
+
+const pagamentosVendas = pagamentosVendasResult.rows;
+
+const vendasComPagamentos = vendas.map((venda) => ({
+  ...venda,
+  pagamentos: pagamentosVendas.filter(
+    (pagamento) => pagamento.comanda_id === venda.id
+  ),
+}));
+
     const total = vendas.reduce(
       (acc, venda) => acc + Number(venda.total || 0),
       0
@@ -742,7 +772,7 @@ app.get('/caixa', async (req, res) => {
       quantidade: vendas.length,
       pagamentos: pagamentosResult.rows,
       dinheiroEsperado,
-      vendas,
+      vendas: vendasComPagamentos,
     });
   } catch (err) {
     console.log(err);
