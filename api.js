@@ -43,6 +43,16 @@ async function criarTabelas() {
   `);
 
   await db.query(`
+  CREATE TABLE IF NOT EXISTS caixas (
+    id SERIAL PRIMARY KEY,
+    valor_inicial NUMERIC(10,2) DEFAULT 0,
+    status TEXT DEFAULT 'ABERTO',
+    data_abertura TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_fechamento TIMESTAMP
+  )
+`);
+
+  await db.query(`
     CREATE TABLE IF NOT EXISTS itens_comanda (
       id SERIAL PRIMARY KEY,
       comanda_id INTEGER REFERENCES comandas(id) ON DELETE CASCADE,
@@ -603,18 +613,99 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
-app.get('/caixa', async (req, res) => {
+app.post('/caixa/abrir', async (req, res) => {
   try {
-    const vendasResult = await db.query(`
+    const { valor_inicial } = req.body;
+
+    const aberto = await db.query(`
+      SELECT *
+      FROM caixas
+      WHERE status = 'ABERTO'
+      LIMIT 1
+    `);
+
+    if (aberto.rows.length > 0) {
+      return res.status(400).json({
+        erro: 'Já existe um caixa aberto',
+      });
+    }
+
+    const result = await db.query(
+      `
+      INSERT INTO caixas (valor_inicial, status)
+      VALUES ($1, 'ABERTO')
+      RETURNING *
+      `,
+      [valor_inicial || 0]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
+app.put('/caixa/fechar', async (req, res) => {
+  try {
+    const result = await db.query(`
+      UPDATE caixas
+      SET status = 'FECHADO',
+          data_fechamento = CURRENT_TIMESTAMP
+      WHERE status = 'ABERTO'
+      RETURNING *
+    `);
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        erro: 'Não existe caixa aberto',
+      });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
+app.get('/caixa', async (req, res) => {app.get('/caixa', async (req, res) => {
+  try {
+    const caixaResult = await db.query(`
+      SELECT *
+      FROM caixas
+      WHERE status = 'ABERTO'
+      ORDER BY id DESC
+      LIMIT 1
+    `);
+
+    const caixaAberto = caixaResult.rows[0];
+
+    if (!caixaAberto) {
+      return res.json({
+        aberto: false,
+        total: 0,
+        quantidade: 0,
+        pagamentos: [],
+        vendas: [],
+        valorInicial: 0,
+        dinheiroEsperado: 0,
+      });
+    }
+
+    const vendasResult = await db.query(
+      `
       SELECT *
       FROM comandas
       WHERE status = 'FECHADA'
-      AND DATE(data AT TIME ZONE 'America/Sao_Paulo') =
-          DATE(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+      AND data >= $1
       ORDER BY data DESC
-    `);
+      `,
+      [caixaAberto.data_abertura]
+    );
 
-    const pagamentosResult = await db.query(`
+    const pagamentosResult = await db.query(
+      `
       SELECT
         pagamentos_comanda.forma_pagamento AS nome,
         SUM(pagamentos_comanda.valor) AS valor
@@ -622,10 +713,11 @@ app.get('/caixa', async (req, res) => {
       JOIN comandas
         ON comandas.id = pagamentos_comanda.comanda_id
       WHERE comandas.status = 'FECHADA'
-      AND DATE(comandas.data AT TIME ZONE 'America/Sao_Paulo') =
-          DATE(CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+      AND comandas.data >= $1
       GROUP BY pagamentos_comanda.forma_pagamento
-    `);
+      `,
+      [caixaAberto.data_abertura]
+    );
 
     const vendas = vendasResult.rows;
 
@@ -634,10 +726,22 @@ app.get('/caixa', async (req, res) => {
       0
     );
 
+    const dinheiro = pagamentosResult.rows.find(
+      (p) => p.nome === 'DINHEIRO'
+    );
+
+    const dinheiroEsperado =
+      Number(caixaAberto.valor_inicial || 0) +
+      Number(dinheiro?.valor || 0);
+
     res.json({
+      aberto: true,
+      caixa: caixaAberto,
+      valorInicial: Number(caixaAberto.valor_inicial || 0),
       total,
       quantidade: vendas.length,
       pagamentos: pagamentosResult.rows,
+      dinheiroEsperado,
       vendas,
     });
   } catch (err) {
