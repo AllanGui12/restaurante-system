@@ -978,6 +978,28 @@ app.get('/caixas/historico', async (req, res) => {
   }
 });
 
+app.put('/bloqueio-sistema', async (req, res) => {
+  try {
+    const { sistema_ativo, data_expiracao } = req.body;
+
+    const result = await db.query(
+      `
+      UPDATE configuracoes
+      SET sistema_ativo = $1,
+          data_expiracao = $2
+      WHERE id = 1
+      RETURNING sistema_ativo, data_expiracao
+      `,
+      [sistema_ativo, data_expiracao]
+    );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {

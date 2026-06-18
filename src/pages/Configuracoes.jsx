@@ -24,6 +24,11 @@ export default function Configuracoes() {
     estoque_minimo: 5,
   });
 
+  const [licenca, setLicenca] = useState({
+  sistema_ativo: true,
+  data_expiracao: '',
+});
+
   async function carregarConfiguracoes() {
     const response = await fetch(`${API_URL}/configuracoes`);
     const data = await response.json();
@@ -36,6 +41,46 @@ export default function Configuracoes() {
       estoque_minimo: data.estoque_minimo || 5,
     });
   }
+
+  async function carregarLicenca() {
+  const response = await fetch(
+    `${API_URL}/bloqueio-sistema`
+  );
+
+  const data = await response.json();
+
+  setLicenca({
+    sistema_ativo:
+      data.sistema_ativo ?? true,
+    data_expiracao:
+      data.data_expiracao || '',
+  });
+}
+
+async function salvarLicenca(status) {
+  await fetch(
+    `${API_URL}/bloqueio-sistema`,
+    {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sistema_ativo: status,
+        data_expiracao:
+          licenca.data_expiracao || null,
+      }),
+    }
+  );
+
+  carregarLicenca();
+
+  alert(
+    status
+      ? 'Sistema liberado!'
+      : 'Sistema bloqueado!'
+  );
+}
 
   async function salvarConfiguracoes() {
     await fetch(`${API_URL}/configuracoes`, {
@@ -51,8 +96,9 @@ export default function Configuracoes() {
   }
 
   useEffect(() => {
-    carregarConfiguracoes();
-  }, []);
+  carregarConfiguracoes();
+  carregarLicenca();
+}, []);
 
   return (
     <div className="bg-[#050816] min-h-screen text-white p-10">
@@ -284,6 +330,60 @@ export default function Configuracoes() {
             </div>
           </div>
         </div>
+
+        <div className="bg-[#0B1120] border border-zinc-800 rounded-3xl p-6">
+  <div className="flex items-center gap-3 mb-6">
+    <Info className="text-red-500" />
+
+    <h2 className="text-2xl font-bold">
+      Licença do Sistema
+    </h2>
+  </div>
+
+  <div className="space-y-4">
+    <div className="flex justify-between">
+      <span>Status</span>
+
+      <span
+        className={`font-bold ${
+          licenca.sistema_ativo
+            ? 'text-green-400'
+            : 'text-red-400'
+        }`}
+      >
+        {licenca.sistema_ativo
+          ? 'ATIVO'
+          : 'BLOQUEADO'}
+      </span>
+    </div>
+
+    <input
+      type="date"
+      value={licenca.data_expiracao}
+      onChange={(e) =>
+        setLicenca({
+          ...licenca,
+          data_expiracao: e.target.value,
+        })
+      }
+      className="w-full bg-[#070D1A] border border-zinc-700 rounded-xl px-4 py-3 text-white outline-none"
+    />
+
+    <button
+      onClick={() => salvarLicenca(true)}
+      className="w-full bg-green-600 hover:bg-green-700 rounded-xl py-3 font-bold"
+    >
+      Liberar Sistema
+    </button>
+
+    <button
+      onClick={() => salvarLicenca(false)}
+      className="w-full bg-red-600 hover:bg-red-700 rounded-xl py-3 font-bold"
+    >
+      Bloquear Sistema
+    </button>
+  </div>
+</div>
 
         <div className="xl:col-span-3 bg-[#0B1120] border border-zinc-800 rounded-3xl p-6">
           <div className="flex items-center gap-3 mb-4">
