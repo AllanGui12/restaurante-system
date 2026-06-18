@@ -63,6 +63,16 @@ async function criarTabelas() {
   `);
 
   await db.query(`
+  ALTER TABLE configuracoes
+  ADD COLUMN IF NOT EXISTS sistema_ativo BOOLEAN DEFAULT true
+`);
+
+await db.query(`
+  ALTER TABLE configuracoes
+  ADD COLUMN IF NOT EXISTS data_expiracao DATE
+`);
+
+  await db.query(`
   ALTER TABLE produtos
   ADD COLUMN IF NOT EXISTS custo NUMERIC(10,2) DEFAULT 0
 `);
@@ -142,6 +152,49 @@ app.post('/produtos', async (req, res) => {
     );
 
     res.json(result.rows[0]);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
+
+app.put('/bloqueio-sistema', async (req, res) => {
+  try {
+    const { sistema_ativo, data_expiracao } = req.body;
+
+    await db.query(
+      `
+      UPDATE configuracoes
+      SET sistema_ativo = $1,
+          data_expiracao = $2
+      WHERE id = 1
+      `,
+      [sistema_ativo, data_expiracao]
+    );
+
+    res.json({
+      sucesso: true,
+      sistema_ativo,
+      data_expiracao,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json(err);
+  }
+});
+
+app.get('/bloqueio-sistema', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT
+        sistema_ativo,
+        data_expiracao
+      FROM configuracoes
+      WHERE id = 1
+    `);
+
+    res.json(result.rows[0] || {});
   } catch (err) {
     console.log(err);
     res.status(500).json(err);
